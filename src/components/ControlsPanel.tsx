@@ -305,7 +305,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
             </div>
 
             {/* Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="flex flex-wrap items-center gap-1.5 pb-1">
               {TEMPLATE_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
@@ -859,7 +859,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
             </div>
 
             {/* Category Filter */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex flex-wrap items-center gap-1 pb-1">
               {[
                 { id: 'hearts', label: 'Hearts', icon: <Heart className="w-3.5 h-3.5 text-rose-500" /> },
                 { id: 'sparkles', label: 'Sparkles', icon: <Sparkles className="w-3.5 h-3.5 text-amber-500" /> },
