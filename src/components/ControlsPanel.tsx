@@ -647,6 +647,31 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </div>
             </div>
 
+            {/* Photos Per Strip */}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-widest text-[#AAAAAA] mb-2 block">
+                Photos Per Strip
+              </label>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[2, 3, 4, 5, 6].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => updateConfig({ photoCount: n })}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      config.photoCount === n
+                        ? 'bg-[#FF6B6B] text-white border-[#FF6B6B] shadow-xs'
+                        : 'bg-white text-[#666666] border-[#E8E6DF] hover:bg-[#FAF9F6] hover:text-[#2D2D2D]'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-[#666666]">
+                Strip size stays the same at every count. 5 and 6 sit flush with no gap.
+              </p>
+            </div>
+
             {/* Spacing & Radius Sliders */}
             <div className="space-y-3 pt-3 border-t border-[#E8E6DF]">
               <div>

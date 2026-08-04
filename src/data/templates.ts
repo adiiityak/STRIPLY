@@ -64,6 +64,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       boardingPass: {
         airlineName: 'URARCHIVE AIRLINES',
         classType: 'FIRST CLASS',
@@ -122,6 +123,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       airMail: {
         airMailBadge: 'PAR AVION / BY AIR MAIL',
         postcardTitle: 'Air Mail Postcard',
@@ -177,6 +179,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       ticket: {
         eventTitle: 'Special Day',
         subtitle: 'PIXELBOOTH',
@@ -231,6 +234,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: 'Studio No. 4, Downtown',
@@ -280,6 +284,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'k-stk-2', symbol: '✨', x: 12, y: 92, scale: 1.1, rotation: -8 }
       ],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: true,
         location: 'Hongdae Street, Seoul',
@@ -326,6 +331,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: 'Selene Studio',
@@ -372,6 +378,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -418,6 +425,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -466,6 +474,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -512,6 +521,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -558,6 +568,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -607,6 +618,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'lip-2', symbol: '❤️', x: 12, y: 92, scale: 1.3, rotation: -10 }
       ],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -653,6 +665,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -701,6 +714,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       musicTrack: {
         title: 'Fix You',
         artist: 'Coldplay'
@@ -751,6 +765,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       musicTrack: {
         title: 'SNOOZE',
         artist: 'SZA',
@@ -802,6 +817,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       lockscreen: {
         time: '11:26',
         date: 'Saturday, November 30',
@@ -854,6 +870,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -900,6 +917,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -948,6 +966,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -994,6 +1013,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -1040,6 +1060,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: true,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: true,
         location: 'Pacific Coast Highway',
@@ -1088,6 +1109,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'p-stk-1', symbol: '❤️', x: 85, y: 94, scale: 1.3, rotation: 15 }
       ],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: true,
         location: 'Santa Monica Pier',
@@ -1137,6 +1159,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'r-stk-2', symbol: '📸', x: 88, y: 88, scale: 1.1, rotation: 10 }
       ],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: 'Downtown Arcade',
@@ -1183,6 +1206,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -1229,6 +1253,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: '',
@@ -1275,6 +1300,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoCount: 4,
       memoryCard: {
         enabled: false,
         location: 'Modern Art Pavilion',

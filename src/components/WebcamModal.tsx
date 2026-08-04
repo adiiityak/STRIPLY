@@ -175,7 +175,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-[#666666] font-semibold">Shots to take:</span>
-            {[3, 4, 6].map((num) => (
+            {[2, 3, 4, 5, 6].map((num) => (
               <button
                 key={num}
                 onClick={() => setTargetCount(num)}

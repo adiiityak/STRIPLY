@@ -149,6 +149,7 @@ export interface StripConfiguration {
   outerPadding: number; // strip margin
   photoBorderRadius: number;
   photoGap: number;
+  photoCount: number; // 2-6 photo slots; strip height stays constant across counts
   memoryCard: MemoryCardDetails;
   showTimelineLabels: boolean;
   stickerList: PlacedSticker[];

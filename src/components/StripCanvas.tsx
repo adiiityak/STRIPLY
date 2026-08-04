@@ -1,6 +1,7 @@
 import React from 'react';
 import { PhotoItem, StripConfiguration, PlacedSticker } from '../types';
 import { getFilterCSS, getFadeOpacity } from '../utils/filterUtils';
+import { computeSlotLayout, clampPhotoCount } from '../utils/stripLayout';
 import {
   Trash2,
   RotateCw,
@@ -166,6 +167,11 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
     const filterCSS = getFilterCSS(config.filter);
     const fadeOverlayOpacity = getFadeOpacity(config.filter);
 
+    // Slot geometry: holds strip height constant across photo counts (2-6); 5 and 6 go flush.
+    const slotCount = clampPhotoCount(config.photoCount);
+    const baseAspect = config.style === 'boothycall' ? 1 : undefined;
+    const slotLayout = computeSlotLayout(slotCount, config.photoGap, baseAspect);
+
     // Frame style classes
     const getFrameContainerClass = () => {
       switch (config.frameType) {
@@ -226,7 +232,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 ? getPatternBackground(config.background.patternName, config.background.color)
                 : undefined,
             width: getCanvasWidth(config.exportFormat),
-            padding: `${config.outerPadding}px`,
+            padding: `${config.outerPadding}px ${config.outerPadding}px ${slotLayout.flushBottom ? 0 : config.outerPadding}px`,
             fontFamily: getFontFamily(config.fontType)
           }}
         >
@@ -470,7 +476,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
           <div
             className="w-full flex flex-col items-center"
             style={{
-              gap: `${config.photoGap}px`,
+              gap: `${slotLayout.gap}px`,
               paddingLeft: config.style === 'film' || config.style === 'selene' ? '20px' : '0px',
               paddingRight: config.style === 'film' || config.style === 'selene' ? '20px' : '0px'
             }}
@@ -482,7 +488,8 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 <p className="text-xs">Upload 3-8 photos to render strip</p>
               </div>
             ) : (
-              photos.map((photo, index) => (
+              <>
+              {photos.slice(0, slotCount).map((photo, index) => (
                 <div
                   key={photo.id}
                   onClick={() => onEditPhoto?.(photo)}
@@ -521,7 +528,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   <div
                     className="relative w-full overflow-hidden bg-zinc-100"
                     style={{
-                      aspectRatio: config.style === 'boothycall' ? '1 / 1' : '4 / 3',
+                      aspectRatio: slotLayout.aspectRatio,
                       borderRadius: config.style === 'boothycall' ? '9999px' : `${config.photoBorderRadius}px`
                     }}
                   >
@@ -593,7 +600,15 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                     </div>
                   )}
                 </div>
-              ))
+              ))}
+              {Array.from({ length: Math.max(0, slotCount - photos.length) }).map((_, i) => (
+                <div
+                  key={`placeholder-${i}`}
+                  className="w-full border-2 border-dashed border-zinc-300"
+                  style={{ aspectRatio: slotLayout.aspectRatio }}
+                />
+              ))}
+              </>
             )}
           </div>
 
