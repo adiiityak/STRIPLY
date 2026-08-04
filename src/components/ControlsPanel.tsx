@@ -57,6 +57,9 @@ import {
   Mail
 } from 'lucide-react';
 import { BoardingPassInfo, TicketInfo, MusicTrackInfo, LockscreenInfo, AirMailInfo } from '../types';
+import { useResizablePanel } from '../hooks/useResizablePanel';
+import { ToolRail, type ToolId } from './ToolRail';
+import { ResizeHandle } from './ResizeHandle';
 
 const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
   all: <Sparkles className="w-3.5 h-3.5 text-amber-500 inline" />,
@@ -100,9 +103,32 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   onOpenShareModal,
   isExporting
 }) => {
-  const [activeTab, setActiveTab] = useState<
-    'photos' | 'templates' | 'customize' | 'filters' | 'stickers' | 'captions' | 'export'
-  >('templates');
+  const [activeTab, setActiveTab] = useState<ToolId>('templates');
+
+  const {
+    width,
+    isCollapsed,
+    effectiveWidth,
+    minWidth,
+    maxWidth,
+    setWidth,
+    nudgeWidth,
+    resetWidth,
+    toggleCollapsed,
+    expand
+  } = useResizablePanel();
+
+  const contentPanelId = 'controls-panel-content';
+
+  // Clicking the active tool collapses the pane; any other tool selects and reopens it.
+  const handleSelectTool = (id: ToolId) => {
+    if (id === activeTab) {
+      toggleCollapsed();
+      return;
+    }
+    setActiveTab(id);
+    expand();
+  };
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiTopic, setAiTopic] = useState('');
@@ -240,39 +266,34 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   };
 
   return (
-    <div className="bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-80 xl:w-96 flex flex-col h-full overflow-hidden">
-      {/* Tab Navigation Header */}
-      <div className="flex items-center overflow-x-auto no-scrollbar border-b border-[#E8E6DF] p-2 gap-1 bg-[#FAF9F6]">
-        {[
-          { id: 'templates', label: 'Styles', icon: Layers },
-          { id: 'photos', label: 'Photos', icon: Upload },
-          { id: 'customize', label: 'Design', icon: Palette },
-          { id: 'filters', label: 'Filters', icon: Sliders },
-          { id: 'stickers', label: 'Stickers', icon: Sticker },
-          { id: 'captions', label: 'Captions', icon: Type },
-          { id: 'export', label: 'Export', icon: Download }
-        ].map((tab) => {
-          const IconComponent = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                isActive
-                  ? 'bg-[#FF6B6B] text-white shadow-md'
-                  : 'text-[#666666] hover:text-[#2D2D2D] hover:bg-[#E8E6DF]/50'
-              }`}
-            >
-              <IconComponent className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div
+      style={{ '--panel-w': `${effectiveWidth}px` } as React.CSSProperties}
+      className="relative bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex h-full overflow-hidden"
+    >
+      <ResizeHandle
+        width={width}
+        minWidth={minWidth}
+        maxWidth={maxWidth}
+        onResize={setWidth}
+        onNudge={nudgeWidth}
+        onReset={resetWidth}
+      />
+
+      <ToolRail
+        activeTool={activeTab}
+        isCollapsed={isCollapsed}
+        contentPanelId={contentPanelId}
+        onSelect={handleSelectTool}
+      />
 
       {/* Tab Content Body */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs">
+      <div
+        id={contentPanelId}
+        role="tabpanel"
+        aria-labelledby={`tool-tab-${activeTab}`}
+        hidden={isCollapsed}
+        className="flex-1 min-w-0 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs"
+      >
         {/* ================= TEMPLATES TAB ================= */}
         {activeTab === 'templates' && (
           <div className="space-y-4">
