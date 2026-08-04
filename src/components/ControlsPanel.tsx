@@ -290,10 +290,12 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     onReorderPhotos(newArr);
   };
 
+  // Stacked on mobile: the rail is a full-width horizontal bar there, so a row
+  // direction would let it consume the whole line and crush the content pane.
   return (
     <div
       style={{ '--panel-w': `${effectiveWidth}px` } as React.CSSProperties}
-      className="relative bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex h-full overflow-hidden"
+      className="relative bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-full overflow-hidden"
     >
       <ResizeHandle
         width={width}
