@@ -1476,7 +1476,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                   value={aiTopic}
                   onChange={(e) => setAiTopic(e.target.value)}
                   placeholder="Topic / vibe (e.g. Seoul Trip, Birthday)"
-                  className="flex-1 bg-white border border-[#E8E6DF] rounded-xl px-2.5 py-1.5 text-xs text-[#2D2D2D]"
+                  className="flex-1 min-w-0 bg-white border border-[#E8E6DF] rounded-xl px-2.5 py-1.5 text-xs text-[#2D2D2D]"
                 />
                 <button
                   onClick={handleGenerateCaptions}
