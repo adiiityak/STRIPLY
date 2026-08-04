@@ -66,6 +66,35 @@ const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
   vintage: <Film className="w-3.5 h-3.5 text-amber-700 inline" />
 };
 
+const TemplateCard: React.FC<{
+  tmpl: (typeof TEMPLATE_DEFINITIONS)[number];
+  isActive: boolean;
+  onSelect: () => void;
+}> = ({ tmpl, isActive, onSelect }) => (
+  <button
+    onClick={onSelect}
+    title={`${tmpl.name} — ${tmpl.tagline}`}
+    aria-pressed={isActive}
+    className={`aspect-square p-2 rounded-xl border transition-all relative overflow-hidden flex flex-col items-center justify-center gap-1 text-center ${
+      isActive
+        ? 'border-2 border-[#FF6B6B] bg-[#FFF5F5] shadow-xs'
+        : 'border border-[#E8E6DF] bg-white hover:bg-[#FAF9F6]'
+    }`}
+  >
+    <span className="text-base leading-none">{CATEGORY_ICON_MAP[tmpl.category]}</span>
+    <span
+      className={`font-bold text-[10.5px] leading-tight line-clamp-2 ${
+        isActive ? 'text-[#FF6B6B]' : 'text-[#2D2D2D]'
+      }`}
+    >
+      {tmpl.name}
+    </span>
+    <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-[#FAF9F6] text-[#666666] border border-[#E8E6DF] max-w-full truncate">
+      {tmpl.badgeText}
+    </span>
+  </button>
+);
+
 interface ControlsPanelProps {
   photos: PhotoItem[];
   config: StripConfiguration;
@@ -335,39 +364,20 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                         <span className="text-[10px] text-[#888888] font-mono">({catTemplates.length})</span>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-2">
+                      <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(84px,1fr))]">
                         {catTemplates.map((tmpl) => (
-                          <button
+                          <TemplateCard
                             key={tmpl.id}
-                            onClick={() => {
+                            tmpl={tmpl}
+                            isActive={config.style === tmpl.id}
+                            onSelect={() =>
                               onChangeConfig({
                                 ...tmpl.config,
                                 captionText: config.captionText || tmpl.config.captionText,
                                 subCaptionText: config.subCaptionText || tmpl.config.subCaptionText
-                              });
-                            }}
-                            className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                              config.style === tmpl.id
-                                ? 'border-2 border-[#FF6B6B] bg-[#FFF5F5] shadow-xs'
-                                : 'border border-[#E8E6DF] bg-white hover:bg-[#FAF9F6]'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span
-                                className={`font-bold text-xs ${
-                                  config.style === tmpl.id ? 'text-[#FF6B6B]' : 'text-[#2D2D2D]'
-                                }`}
-                              >
-                                {tmpl.name}
-                              </span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF9F6] text-[#666666] border border-[#E8E6DF]">
-                                {tmpl.badgeText}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-[#666666] line-clamp-2 leading-relaxed">
-                              {tmpl.tagline}
-                            </p>
-                          </button>
+                              })
+                            }
+                          />
                         ))}
                       </div>
                     </div>
@@ -376,37 +386,20 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </div>
             ) : (
               /* Render single selected category */
-              <div className="grid grid-cols-1 gap-2.5">
+              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(84px,1fr))]">
                 {TEMPLATE_DEFINITIONS.filter((t) => t.category === selectedCategory).map((tmpl) => (
-                  <button
+                  <TemplateCard
                     key={tmpl.id}
-                    onClick={() => {
+                    tmpl={tmpl}
+                    isActive={config.style === tmpl.id}
+                    onSelect={() =>
                       onChangeConfig({
                         ...tmpl.config,
                         captionText: config.captionText || tmpl.config.captionText,
                         subCaptionText: config.subCaptionText || tmpl.config.subCaptionText
-                      });
-                    }}
-                    className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                      config.style === tmpl.id
-                        ? 'border-2 border-[#FF6B6B] bg-[#FFF5F5] shadow-xs'
-                        : 'border border-[#E8E6DF] bg-white hover:bg-[#FAF9F6]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span
-                        className={`font-bold text-xs ${
-                          config.style === tmpl.id ? 'text-[#FF6B6B]' : 'text-[#2D2D2D]'
-                        }`}
-                      >
-                        {tmpl.name}
-                      </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF9F6] text-[#666666] border border-[#E8E6DF]">
-                        {tmpl.badgeText}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#666666] line-clamp-2 leading-relaxed">{tmpl.tagline}</p>
-                  </button>
+                      })
+                    }
+                  />
                 ))}
               </div>
             )}
