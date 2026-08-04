@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Header } from './components/Header';
 import { StripCanvas } from './components/StripCanvas';
 import { ControlsPanel } from './components/ControlsPanel';
@@ -12,11 +12,16 @@ import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
 import { downloadStripAsPNG, downloadStripAsPDF, exportStripToDataUrl } from './utils/exportUtils';
 import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
+const DEFAULT_TEMPLATE_ID = 'airmail';
+const DEFAULT_TEMPLATE =
+  TEMPLATE_DEFINITIONS.find((t) => t.id === DEFAULT_TEMPLATE_ID) ?? TEMPLATE_DEFINITIONS[0];
+
 export default function App() {
   // Pre-load default sample set (Seoul Cafe Vibes) for instant visual preview
   const [photos, setPhotos] = useState<PhotoItem[]>(SAMPLE_PHOTO_SETS[0].photos);
-  // Default to Korean Photo Booth style (Haru / Life 4 Cuts style)
-  const [config, setConfig] = useState<StripConfiguration>(TEMPLATE_DEFINITIONS[1].config);
+  // Default template, looked up by id so adding or reordering templates cannot
+  // silently change which one the app opens on.
+  const [config, setConfig] = useState<StripConfiguration>(DEFAULT_TEMPLATE.config);
 
   // Canvas ref for html-to-image exports
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -28,13 +33,22 @@ export default function App() {
   const [editingPhoto, setEditingPhoto] = useState<PhotoItem | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
-  // Toast Notification
-  const [toastMsg, setToastMsg] = useState<string | null>('Welcome to Striply! Turn your memories into photo strips 📸');
+  // Toast Notification. One effect owns dismissal so the initial welcome message
+  // expires like any other, and a new toast restarts the clock instead of being
+  // cut short by the previous toast's timer.
+  const [toast, setToast] = useState<{ msg: string; id: number } | null>({
+    id: 0,
+    msg: 'Welcome to Striply! Turn your memories into photo strips 📸'
+  });
 
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
-  };
+  const toastNonce = useRef(0);
+  const showToast = (msg: string) => setToast({ msg, id: ++toastNonce.current });
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // 1. Load Sample Photo Set
   const handleLoadSampleSet = (set: SampleSet) => {
@@ -182,8 +196,10 @@ export default function App() {
     }
   };
 
+  // On desktop the shell is exactly one viewport tall so the canvas and the controls
+  // panel each scroll internally. Mobile keeps normal document scrolling.
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
       {/* Top Header */}
       <Header
         onLoadSampleSet={handleLoadSampleSet}
@@ -195,9 +211,11 @@ export default function App() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
         {/* Middle Canvas Preview Area */}
-        <main className="flex-1 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center justify-center relative overflow-auto min-h-[500px]">
+        {/* Centring is done with my-auto on the strip wrapper rather than justify-center:
+            auto margins still allow scrolling to the top once the strip overflows. */}
+        <main className="flex-1 lg:min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto min-h-[500px]">
           {/* Canvas Zoom Toolbar floating top-right */}
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-[#E8E6DF] rounded-2xl p-1.5 flex items-center gap-1 shadow-md z-20 text-xs text-[#2D2D2D]">
             <button
@@ -292,10 +310,10 @@ export default function App() {
       />
 
       {/* Floating Toast Notification */}
-      {toastMsg && (
+      {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-[#2D2D2D] text-white px-5 py-3 rounded-full shadow-2xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200 border border-white/10">
           <Sparkles className="w-4 h-4 text-[#FF6B6B] shrink-0" />
-          <span>{toastMsg}</span>
+          <span>{toast.msg}</span>
         </div>
       )}
     </div>

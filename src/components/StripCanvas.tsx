@@ -99,6 +99,35 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
   ({ photos, config, onUpdateSticker, onDeleteSticker, onEditPhoto, zoomLevel }, ref) => {
     const [selectedStickerId, setSelectedStickerId] = React.useState<string | null>(null);
 
+    // A CSS transform paints at a different size but leaves the layout box unchanged, so a
+    // scaled strip would either overflow its scroll container unreachably (zoom in) or leave
+    // dead scroll space (zoom out). Measure the unscaled canvas and give the outer wrapper the
+    // scaled dimensions, so the scroll container always matches what is actually on screen.
+    const canvasElRef = React.useRef<HTMLDivElement | null>(null);
+    const [naturalSize, setNaturalSize] = React.useState<{ w: number; h: number } | null>(null);
+
+    // Keep the forwarded export ref (used by html-to-image) pointing at the *unscaled* canvas.
+    const setCanvasRef = React.useCallback(
+      (node: HTMLDivElement | null) => {
+        canvasElRef.current = node;
+        if (typeof ref === 'function') ref(node);
+        else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      },
+      [ref]
+    );
+
+    // useLayoutEffect so the wrapper is sized before the first paint (no flash of empty canvas).
+    React.useLayoutEffect(() => {
+      const el = canvasElRef.current;
+      if (!el) return;
+      const measure = () => setNaturalSize({ w: el.offsetWidth, h: el.offsetHeight });
+      measure();
+      // ResizeObserver reports the layout box, which is unaffected by the parent's scale().
+      const observer = new ResizeObserver(measure);
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, []);
+
     // Sticker animation class
     const getStickerAnimClass = (animMode?: string) => {
       switch (animMode) {
@@ -172,12 +201,20 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
 
     return (
       <div
-        className="relative transition-transform duration-200 select-none flex justify-center items-center"
-        style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
+        className="relative transition-[width,height] duration-200"
+        style={
+          naturalSize
+            ? { width: naturalSize.w * zoomLevel, height: naturalSize.h * zoomLevel }
+            : undefined
+        }
       >
-        {/* Main Canvas Container for Export */}
         <div
-          ref={ref}
+          className="absolute top-0 left-0 transition-transform duration-200 select-none flex justify-center items-center"
+          style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
+        >
+          {/* Main Canvas Container for Export */}
+          <div
+            ref={setCanvasRef}
           id="striply-canvas"
           className="relative shadow-2xl transition-all overflow-hidden flex flex-col items-center"
           style={{
@@ -966,6 +1003,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
               </div>
             );
           })}
+          </div>
         </div>
       </div>
     );

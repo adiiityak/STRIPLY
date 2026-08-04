@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showSamplesMenu, setShowSamplesMenu] = React.useState(false);
 
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-[#E8E6DF] text-[#2D2D2D] sticky top-0 z-40 px-4 py-3 shadow-xs">
+    <header className="bg-white/95 backdrop-blur-md border-b border-[#E8E6DF] text-[#2D2D2D] sticky top-0 z-40 px-4 py-3 shadow-xs shrink-0">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-3">
