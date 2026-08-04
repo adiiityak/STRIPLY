@@ -140,7 +140,8 @@ apart from the orientation.
 
 Clicking the **active** tool's icon collapses the content pane, leaving the 68px rail.
 Clicking **any** icon while collapsed reopens the pane and selects that tool. The state
-persists. The active rail button carries `aria-expanded` to describe this.
+persists. The collapse state is conveyed by the content pane's `hidden` attribute and the
+active tab's tooltip.
 
 ## Accessibility
 

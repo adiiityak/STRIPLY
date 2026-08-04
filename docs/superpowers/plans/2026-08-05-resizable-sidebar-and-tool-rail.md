@@ -470,6 +470,8 @@ export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: 
     focusTabAt(next);
   };
 
+  const hasActiveMatch = TOOL_TABS.some((tool) => tool.id === activeTool);
+
   return (
     <div
       ref={railRef}
@@ -488,9 +490,8 @@ export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: 
             role="tab"
             aria-selected={isActive}
             aria-controls={contentPanelId}
-            aria-expanded={isActive ? !isCollapsed : undefined}
-            tabIndex={isActive ? 0 : -1}
-            title={tool.label}
+            tabIndex={isActive || (!hasActiveMatch && index === 0) ? 0 : -1}
+            title={isActive ? `${tool.label} — click to ${isCollapsed ? 'expand' : 'collapse'}` : tool.label}
             onClick={() => onSelect(tool.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
             className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B6B] ${
