@@ -16,10 +16,6 @@ import { STICKER_COLLECTION, BACKGROUND_PRESETS } from '../data/stickers';
 import {
   Upload,
   Layers,
-  Palette,
-  Sliders,
-  Sticker,
-  Type,
   Download,
   Sparkles,
   RefreshCw,
