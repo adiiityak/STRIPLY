@@ -258,7 +258,7 @@ export function writePanelState(storage: StorageLike | null, state: PanelState):
 - [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npm test`
-Expected: PASS — 19 tests across 4 suites.
+Expected: PASS — 18 tests across 4 suites.
 
 - [ ] **Step 6: Typecheck**
 
@@ -384,7 +384,7 @@ Expected: exit code 0. The hook is not consumed yet, which is fine — it is not
 - [ ] **Step 3: Confirm the unit tests still pass**
 
 Run: `npm test`
-Expected: PASS — still 19 tests.
+Expected: PASS — still 18 tests.
 
 - [ ] **Step 4: Commit**
 
@@ -1022,7 +1022,7 @@ Expected: `pass: true` at all three viewports. The mobile case specifically prov
 npm test && npx tsc --noEmit && npm run build
 ```
 
-Expected: 19 tests pass, typecheck exits 0, build succeeds with no `import.meta` warning (only the pre-existing >500kB chunk note).
+Expected: 18 tests pass, typecheck exits 0, build succeeds with no `import.meta` warning (only the pre-existing >500kB chunk note).
 
 - [ ] **Step 5: Commit**
 
