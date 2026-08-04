@@ -3,34 +3,21 @@ import {
   BASELINE_COUNT,
   BASELINE_ASPECT,
   clampPhotoCount,
-  computeSlotLayout
+  computeSlotLayout,
+  getColumnAspectRatio
 } from './stripLayout';
 
 describe('computeSlotLayout', () => {
-  it('reduces exactly to the 4:3 baseline at 4 photos (no-regression guarantee)', () => {
+  it('keeps the configured gap and non-flush state at 4 photos (no-regression guarantee)', () => {
     const layout = computeSlotLayout(4, 12);
-    expect(layout.aspectRatio).toBe(4 / 3);
     expect(layout.gap).toBe(12);
     expect(layout.flushBottom).toBe(false);
   });
 
-  it('makes each photo taller than the baseline at 2 photos', () => {
+  it('keeps the configured gap and non-flush state at 2 photos', () => {
     const layout = computeSlotLayout(2, 12);
-    expect(layout.aspectRatio).toBe(2 / 3);
-    expect(layout.aspectRatio).toBeLessThan(computeSlotLayout(4, 12).aspectRatio);
-  });
-
-  it('goes flush with no gap at 6 photos', () => {
-    const layout = computeSlotLayout(6, 12);
-    expect(layout.aspectRatio).toBe(2);
-    expect(layout.gap).toBe(0);
-    expect(layout.flushBottom).toBe(true);
-  });
-
-  it('goes flush with no gap at 5 photos', () => {
-    const layout = computeSlotLayout(5, 12);
-    expect(layout.gap).toBe(0);
-    expect(layout.flushBottom).toBe(true);
+    expect(layout.gap).toBe(12);
+    expect(layout.flushBottom).toBe(false);
   });
 
   it('keeps the configured gap and non-flush state at 3 photos', () => {
@@ -39,18 +26,40 @@ describe('computeSlotLayout', () => {
     expect(layout.flushBottom).toBe(false);
   });
 
-  it('keeps total photo height invariant across every count (strip size stays the same)', () => {
-    const expectedTotal = BASELINE_COUNT / BASELINE_ASPECT;
-    for (let n = 2; n <= 6; n++) {
-      const layout = computeSlotLayout(n, 0);
-      const totalHeight = n * (1 / layout.aspectRatio);
-      expect(totalHeight).toBeCloseTo(expectedTotal);
-    }
+  it('goes flush with no gap at 5 photos', () => {
+    const layout = computeSlotLayout(5, 12);
+    expect(layout.gap).toBe(0);
+    expect(layout.flushBottom).toBe(true);
   });
 
-  it('uses the provided square (1:1) baseline for boothycall-style strips', () => {
-    const layout = computeSlotLayout(4, 12, 1);
-    expect(layout.aspectRatio).toBe(1);
+  it('goes flush with no gap at 6 photos', () => {
+    const layout = computeSlotLayout(6, 12);
+    expect(layout.gap).toBe(0);
+    expect(layout.flushBottom).toBe(true);
+  });
+});
+
+describe('getColumnAspectRatio', () => {
+  it('reduces to "1 / 3" for the default 4:3 baseline (4 photos at 4:3 = 3 units tall)', () => {
+    expect(getColumnAspectRatio()).toBe('1 / 3');
+    expect(getColumnAspectRatio(BASELINE_ASPECT)).toBe('1 / 3');
+  });
+
+  it('uses "1 / 4" for a square (1:1) baseline photo, as used by boothycall-style strips', () => {
+    expect(getColumnAspectRatio(1)).toBe('1 / 4');
+  });
+
+  it('never varies with photo count: the column height (in units of its own width) is invariant', () => {
+    // getColumnAspectRatio takes no photoCount argument at all, so for a fixed column width
+    // the resulting height is identical no matter how many photos (2-6) are laid out inside
+    // it — gaps and per-slot padding are absorbed by the flexed slots, not by the column.
+    // Simulate every supported count and confirm the derived ratio string never changes.
+    const ratios = [2, 3, 4, 5, 6].map((count) => {
+      void computeSlotLayout(clampPhotoCount(count), 12); // gap/flushBottom vary; ratio must not.
+      return getColumnAspectRatio();
+    });
+    expect(new Set(ratios).size).toBe(1);
+    expect(ratios[0]).toBe(`1 / ${BASELINE_COUNT / BASELINE_ASPECT}`);
   });
 });
 

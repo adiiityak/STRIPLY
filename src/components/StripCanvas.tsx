@@ -1,7 +1,7 @@
 import React from 'react';
 import { PhotoItem, StripConfiguration, PlacedSticker } from '../types';
 import { getFilterCSS, getFadeOpacity } from '../utils/filterUtils';
-import { computeSlotLayout, clampPhotoCount } from '../utils/stripLayout';
+import { computeSlotLayout, clampPhotoCount, getColumnAspectRatio } from '../utils/stripLayout';
 import {
   Trash2,
   RotateCw,
@@ -170,7 +170,8 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
     // Slot geometry: holds strip height constant across photo counts (2-6); 5 and 6 go flush.
     const slotCount = clampPhotoCount(config.photoCount);
     const baseAspect = config.style === 'boothycall' ? 1 : undefined;
-    const slotLayout = computeSlotLayout(slotCount, config.photoGap, baseAspect);
+    const slotLayout = computeSlotLayout(slotCount, config.photoGap);
+    const columnAspectRatio = getColumnAspectRatio(baseAspect);
 
     // Frame style classes
     const getFrameContainerClass = () => {
@@ -477,6 +478,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             className="w-full flex flex-col items-center"
             style={{
               gap: `${slotLayout.gap}px`,
+              aspectRatio: columnAspectRatio,
               paddingLeft: config.style === 'film' || config.style === 'selene' ? '20px' : '0px',
               paddingRight: config.style === 'film' || config.style === 'selene' ? '20px' : '0px'
             }}
@@ -495,6 +497,8 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   onClick={() => onEditPhoto?.(photo)}
                   className={`group relative w-full cursor-pointer transition-transform hover:scale-[1.01] ${getFrameContainerClass()}`}
                   style={{
+                    flex: '1 1 0',
+                    minHeight: 0,
                     backgroundColor:
                       config.style === 'polaroid'
                         ? '#ffffff'
@@ -528,7 +532,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   <div
                     className="relative w-full overflow-hidden bg-zinc-100"
                     style={{
-                      aspectRatio: slotLayout.aspectRatio,
+                      height: '100%',
                       borderRadius: config.style === 'boothycall' ? '9999px' : `${config.photoBorderRadius}px`
                     }}
                   >
@@ -605,7 +609,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 <div
                   key={`placeholder-${i}`}
                   className="w-full border-2 border-dashed border-zinc-300"
-                  style={{ aspectRatio: slotLayout.aspectRatio }}
+                  style={{ flex: '1 1 0', minHeight: 0 }}
                 />
               ))}
               </>
