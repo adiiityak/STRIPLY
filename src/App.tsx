@@ -215,7 +215,7 @@ export default function App() {
         {/* Middle Canvas Preview Area */}
         {/* Centring is done with my-auto on the strip wrapper rather than justify-center:
             auto margins still allow scrolling to the top once the strip overflows. */}
-        <main className="flex-1 lg:min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto min-h-[500px]">
+        <main className="flex-1 lg:min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto min-h-[320px] max-h-[60vh] lg:max-h-none">
           {/* Canvas Zoom Toolbar floating top-right */}
           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-[#E8E6DF] rounded-2xl p-1.5 flex items-center gap-1 shadow-md z-20 text-xs text-[#2D2D2D]">
             <button

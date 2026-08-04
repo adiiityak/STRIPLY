@@ -38,6 +38,17 @@ interface ToolRailProps {
 
 export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: ToolRailProps) {
   const railRef = React.useRef<HTMLDivElement | null>(null);
+  const [isDesktop, setIsDesktop] = React.useState(() =>
+    typeof window === 'undefined' ? true : window.matchMedia('(min-width: 1024px)').matches
+  );
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, []);
 
   const focusTabAt = (index: number) => {
     const buttons = railRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
@@ -48,8 +59,8 @@ export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: 
     const last = TOOL_TABS.length - 1;
     let next: number | null = null;
 
-    if (event.key === 'ArrowDown') next = index === last ? 0 : index + 1;
-    else if (event.key === 'ArrowUp') next = index === 0 ? last : index - 1;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = index === last ? 0 : index + 1;
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = index === 0 ? last : index - 1;
     else if (event.key === 'Home') next = 0;
     else if (event.key === 'End') next = last;
 
@@ -65,9 +76,9 @@ export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: 
     <div
       ref={railRef}
       role="tablist"
-      aria-orientation="vertical"
+      aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
       aria-label="Editing tools"
-      className="w-[68px] shrink-0 bg-[#FAF9F6] border-r border-[#E8E6DF] flex flex-col gap-1 p-1.5 overflow-y-auto no-scrollbar"
+      className="w-full shrink-0 bg-[#FAF9F6] border-b border-[#E8E6DF] flex flex-row flex-wrap gap-1 p-1.5 lg:w-[68px] lg:flex-col lg:flex-nowrap lg:border-b-0 lg:border-r lg:overflow-y-auto lg:no-scrollbar"
     >
       {TOOL_TABS.map((tool, index) => {
         const Icon = tool.icon;
@@ -83,7 +94,7 @@ export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: 
             title={isActive ? `${tool.label} — click to ${isCollapsed ? 'expand' : 'collapse'}` : tool.label}
             onClick={() => onSelect(tool.id)}
             onKeyDown={(event) => handleKeyDown(event, index)}
-            className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B6B] ${
+            className={`flex-1 min-w-[64px] lg:flex-none lg:min-w-0 flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B6B] ${
               isActive
                 ? 'bg-[#FF6B6B] text-white shadow-md'
                 : 'text-[#666666] hover:text-[#2D2D2D] hover:bg-[#E8E6DF]/50'
