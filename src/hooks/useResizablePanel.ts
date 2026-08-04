@@ -60,7 +60,7 @@ export function useResizablePanel() {
   }, []);
 
   const resetWidth = useCallback(() => {
-    setState((prev) => ({ ...prev, width: DEFAULT_WIDTH }));
+    setState((prev) => ({ ...prev, width: clampWidth(DEFAULT_WIDTH, getViewportWidth()) }));
   }, []);
 
   const toggleCollapsed = useCallback(() => {
