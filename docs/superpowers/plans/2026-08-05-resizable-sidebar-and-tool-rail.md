@@ -1029,6 +1029,126 @@ git commit -m "fix: define the no-scrollbar and custom-scrollbar utilities"
 
 ---
 
+### Task 7: Wrap the category chip strips instead of scrolling them
+
+**Files:**
+- Modify: `src/components/ControlsPanel.tsx:287` (template category pills)
+- Modify: `src/components/ControlsPanel.tsx:841` (sticker category pills)
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: nothing. Presentation-only change.
+
+The tool tab bar was not the only strip hiding content. Measured at a 384px panel:
+
+| Strip | Needs | Gets | Hidden | Off-screen chips |
+|---|---|---|---|---|
+| Template categories | 820px | 343px | **477px** | Photobooth & Studio, Romance & Events, Music & Tech, Vintage & Film |
+| Sticker categories | 517px | 343px | **174px** | Tape, Doodles |
+
+Both are `overflow-x-auto no-scrollbar`, so — exactly like the tab bar — there is no scrollbar hinting that more exists. These are chips, not tabs, so wrapping is the natural fix: every option is visible at once, and rows re-flow automatically as the user widens the now-resizable panel.
+
+- [ ] **Step 1: Wrap the template category pills**
+
+At `src/components/ControlsPanel.tsx:287`, replace:
+
+```tsx
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+```
+
+with:
+
+```tsx
+            <div className="flex flex-wrap items-center gap-1.5 pb-1">
+```
+
+- [ ] **Step 2: Wrap the sticker category pills**
+
+At `src/components/ControlsPanel.tsx:841`, replace:
+
+```tsx
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1">
+```
+
+with:
+
+```tsx
+            <div className="flex flex-wrap items-center gap-1 pb-1">
+```
+
+Leave the `whitespace-nowrap` on the individual chip buttons: it keeps each label on one line while the container wraps between chips.
+
+- [ ] **Step 3: Verify no strip in the panel hides anything**
+
+Visit each tool in turn and assert that no horizontally-scrolling strip remains anywhere in the panel:
+
+```js
+(async () => {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const panel = document.querySelector('main').parentElement.lastElementChild;
+  const tabs = [...panel.querySelectorAll('[role="tab"]')];
+  const offenders = [];
+  for (const tab of tabs) {
+    tab.click();
+    await sleep(350);
+    [...panel.querySelectorAll('div')].forEach(d => {
+      if (d.scrollWidth > d.clientWidth + 1) {
+        const chips = [...d.querySelectorAll('button')];
+        offenders.push({
+          tool: tab.innerText.trim(),
+          hiddenPx: d.scrollWidth - d.clientWidth,
+          chips: chips.map(c => c.innerText.trim().replace(/\s+/g, ' '))
+        });
+      }
+    });
+  }
+  return { pass: offenders.length === 0, offenders };
+})()
+```
+
+Expected: `pass: true`, `offenders: []`.
+
+- [ ] **Step 4: Confirm the chips re-flow when the panel is resized**
+
+Select the Styles tool, then run:
+
+```js
+(async () => {
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const panel = document.querySelector('main').parentElement.lastElementChild;
+  const handle = panel.querySelector('[role="separator"]');
+  const rows = () => {
+    const strip = [...panel.querySelectorAll('div')]
+      .find(d => [...d.querySelectorAll('button')].some(b => b.innerText.includes('All Templates')));
+    const tops = new Set([...strip.querySelectorAll('button')].map(b => Math.round(b.getBoundingClientRect().top)));
+    return { rowCount: tops.size, stripHiddenPx: strip.scrollWidth - strip.clientWidth };
+  };
+  handle.focus();
+  const narrow = rows();
+  for (let i = 0; i < 12; i++) { // widen toward the 720px clamp
+    handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    await sleep(60);
+  }
+  await sleep(250);
+  const wide = rows();
+  return {
+    narrow, wide,
+    pass: narrow.stripHiddenPx === 0 && wide.stripHiddenPx === 0 && wide.rowCount <= narrow.rowCount
+  };
+})()
+```
+
+Expected: `pass: true` — nothing hidden at either width, and widening the panel uses the same number of rows or fewer.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/components/ControlsPanel.tsx
+git commit -m "fix: wrap category chip strips so no options are hidden off-screen"
+```
+
+---
+
 ## Self-Review
 
 **Spec coverage:**
@@ -1050,8 +1170,12 @@ git commit -m "fix: define the no-scrollbar and custom-scrollbar utilities"
 | separator role, aria-valuenow/min/max, 16px nudge, Home/End, double-click reset | Task 4 |
 | `custom-scrollbar` and `no-scrollbar` defined | Task 6 |
 | Verification: overflow, drag, persistence, collapse, keyboard, regression | Task 5 Steps 5-7, Task 6 Steps 2-4 |
+| Category chip strips hide options off-screen (added after the spec was written) | Task 7 |
 
-No gaps.
+No gaps. Task 7 covers a defect found while measuring, not present in the original spec: the
+template and sticker category strips hide 477px and 174px of chips respectively. It is the same
+root cause as the tab bar — a `no-scrollbar` horizontal overflow container — so it belongs with
+this work rather than in a separate change.
 
 **Placeholder scan:** No TBD/TODO, no "add error handling" hand-waving, no "similar to Task N". Every code step contains complete code and every command has an expected result.
 
