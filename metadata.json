@@ -1,0 +1,6 @@
+{
+  "name": "Striply - Photo Booth Strip Maker",
+  "description": "Turn your memories into vintage photo booth strips with custom templates, stickers, filters, memory notes, and instant exports.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
