@@ -49,8 +49,12 @@ Copy these exact values; every task depends on them.
 - [ ] **Step 1: Add the test runner**
 
 ```bash
-npm install --save-dev vitest@^3.2.4
+npm install --save-dev vitest@^4.1.10
 ```
+
+Vitest 4 declares `vite: ^6.0.0 || ^7.0.0 || ^8.0.0` and this project is on Vite 6.4.3, so no
+peer conflict. No DOM environment is needed: the tests inject a fake storage object and never
+touch `window`, so Vitest's default `node` environment is correct and `jsdom` is not installed.
 
 Then add to the `"scripts"` block in `package.json`, after the `"lint"` entry:
 
