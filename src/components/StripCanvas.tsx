@@ -12,17 +12,12 @@ import {
   Sparkles,
   QrCode,
   Heart,
-  Play,
   Pause,
   SkipBack,
   SkipForward,
   Shuffle,
   Repeat,
-  Camera,
-  MessageCircle,
-  Share2,
   Lock,
-  Scissors,
   Plane
 } from 'lucide-react';
 
@@ -1119,9 +1114,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 onPointerUp={handleStickerPointerEnd}
                 onPointerCancel={handleStickerPointerEnd}
                 onKeyDown={(e) => handleStickerKeyDown(e, stk)}
-                className={`absolute cursor-grab active:cursor-grabbing z-30 transition-shadow touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B6B] ${animClass} ${
-                  selectedStickerId === stk.id ? 'ring-2 ring-[#FF6B6B] rounded-lg p-1 bg-white/40' : ''
-                }`}
+                className={`absolute cursor-grab active:cursor-grabbing z-30 transition-shadow touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B6B] ${animClass}`}
                 style={{
                   left: `${stk.x}%`,
                   top: `${stk.y}%`,
@@ -1130,7 +1123,14 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   transform: `translate(-50%, -50%) scale(${stk.scale}) rotate(${stk.rotation}deg)`
                 } as React.CSSProperties}
               >
-                <span className="text-2xl drop-shadow-md select-none">{stk.symbol}</span>
+                {/* Selection ring lives on its own no-export child. Putting it on the sticker
+                    itself baked a coral ring into exported PNGs, and marking the sticker
+                    no-export would have dropped the sticker from the export entirely. */}
+                {selectedStickerId === stk.id && (
+                  <div className="no-export absolute -inset-1 rounded-lg ring-2 ring-[#FF6B6B] bg-white/40 pointer-events-none" />
+                )}
+
+                <span className="relative text-2xl drop-shadow-md select-none">{stk.symbol}</span>
 
                 {selectedStickerId === stk.id && (
                   <div className="no-export absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#2D2D2D] text-white rounded-full px-2 py-0.5 text-[10px] shadow-lg">

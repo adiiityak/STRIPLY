@@ -131,8 +131,8 @@ apart from the orientation.
   `className="w-full lg:w-[var(--panel-w)]"`.
   Because the variable is only consumed at `lg`, the mobile full-width stacked layout is
   untouched with no JS media query anywhere.
-- Content pane is not rendered when collapsed, so its scroll position resets cleanly and the
-  DOM stays small.
+- Content pane is hidden (via the `hidden` attribute) when collapsed, which removes it from
+  layout and the accessibility tree while keeping the rail's `aria-controls` target valid.
 
 `App.tsx` needs no changes.
 

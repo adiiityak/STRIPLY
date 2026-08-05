@@ -55,6 +55,7 @@ export function writePanelState(storage: StorageLike | null, state: PanelState):
     storage.setItem(WIDTH_KEY, String(state.width));
     storage.setItem(COLLAPSED_KEY, String(state.isCollapsed));
   } catch {
-    // Private-mode browsers throw on write; in-memory state is a fine degradation.
+    // Private-mode browsers throw on write. Swallowing it means the caller's state simply
+    // isn't persisted for this session, which is the intended degradation.
   }
 }

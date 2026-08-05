@@ -79,6 +79,11 @@ describe('readPanelState', () => {
     expect(readPanelState(fakeStorage({ [WIDTH_KEY]: '' }), 1440).width).toBe(DEFAULT_WIDTH);
   });
 
+  it('falls back to the default for a whitespace-only width string', () => {
+    // Number('  ') is 0, which would otherwise clamp silently up to MIN_WIDTH.
+    expect(readPanelState(fakeStorage({ [WIDTH_KEY]: '   ' }), 1440).width).toBe(DEFAULT_WIDTH);
+  });
+
   it('treats any non-"true" collapsed value as expanded', () => {
     expect(readPanelState(fakeStorage({ [COLLAPSED_KEY]: 'nope' }), 1440).isCollapsed).toBe(false);
   });

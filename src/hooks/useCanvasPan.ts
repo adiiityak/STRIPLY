@@ -78,7 +78,10 @@ export function useCanvasPan(
         startScrollTop: el.scrollTop,
         moved: false
       };
-      el.setPointerCapture(event.pointerId);
+      // Deliberately NOT capturing the pointer yet. While a pointer is captured the browser
+      // fires the following `click` at the capturing element, so capturing on every press made
+      // clicks land on <main> instead of the photo and the photo editor never opened. Capture is
+      // taken only once the press is confirmed to be a drag, below.
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -91,6 +94,14 @@ export function useCanvasPan(
       if (!g.moved) {
         g.moved = true;
         setIsPanning(true);
+        // Now that this is definitely a pan, capture so the gesture survives the pointer
+        // leaving the container. Taking capture here rather than on pointerdown keeps plain
+        // clicks retargeting normally to the photo underneath.
+        try {
+          el.setPointerCapture(event.pointerId);
+        } catch {
+          // Pointer already gone; the move handler simply stops receiving events.
+        }
       }
       // Dragging the strip right reveals content to its left, so scroll decreases.
       el.scrollLeft = g.startScrollLeft - dx;

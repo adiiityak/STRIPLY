@@ -6,6 +6,8 @@ interface ResizeHandleProps {
   width: number;
   minWidth: number;
   maxWidth: number;
+  /** id of the region this separator resizes, per the APG window-splitter pattern. */
+  controlsId: string;
   onResize: (px: number) => void;
   onNudge: (delta: number) => void;
   onReset: () => void;
@@ -15,6 +17,7 @@ export function ResizeHandle({
   width,
   minWidth,
   maxWidth,
+  controlsId,
   onResize,
   onNudge,
   onReset
@@ -72,6 +75,7 @@ export function ResizeHandle({
       role="separator"
       aria-orientation="vertical"
       aria-label="Resize controls sidebar"
+      aria-controls={controlsId}
       aria-valuenow={width}
       aria-valuemin={minWidth}
       aria-valuemax={maxWidth}
@@ -85,11 +89,13 @@ export function ResizeHandle({
       title="Drag to resize. Double-click to reset."
       className="hidden lg:block absolute left-0 top-0 h-full w-[11px] -translate-x-1/2 z-30 cursor-col-resize group touch-none focus-visible:outline-none"
     >
+      {/* The native outline is suppressed, so the bar itself is the focus indicator: it both
+          colours and widens on focus so a keyboard user can actually see where they are. */}
       <div
-        className={`mx-auto h-full w-[5px] rounded-full transition-colors ${
+        className={`mx-auto h-full rounded-full transition-all ${
           isDragging
-            ? 'bg-[#FF6B6B]'
-            : 'bg-transparent group-hover:bg-[#FF6B6B]/40 group-focus-visible:bg-[#FF6B6B]'
+            ? 'w-[7px] bg-[#FF6B6B]'
+            : 'w-[5px] bg-transparent group-hover:bg-[#FF6B6B]/40 group-focus-visible:w-[7px] group-focus-visible:bg-[#FF6B6B]'
         }`}
       />
     </div>

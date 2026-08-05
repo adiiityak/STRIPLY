@@ -20,14 +20,9 @@ import {
   Sparkles,
   RefreshCw,
   Trash2,
-  Plus,
   Video,
   Wand2,
-  Calendar,
-  MapPin,
   Music,
-  Sun,
-  QrCode,
   FileText,
   Check,
   RotateCw,
@@ -37,7 +32,6 @@ import {
   Plane,
   Ticket,
   Smile,
-  Gift,
   Camera,
   Film,
   Keyboard,
@@ -49,7 +43,6 @@ import {
   Heart,
   Edit3,
   Clock,
-  Compass,
   Mail
 } from 'lucide-react';
 import { BoardingPassInfo, TicketInfo, MusicTrackInfo, LockscreenInfo, AirMailInfo } from '../types';
@@ -301,6 +294,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   // direction would let it consume the whole line and crush the content pane.
   return (
     <div
+      id="controls-panel"
       style={{ '--panel-w': `${effectiveWidth}px` } as React.CSSProperties}
       className="relative bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-full overflow-hidden"
     >
@@ -308,6 +302,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
         width={width}
         minWidth={minWidth}
         maxWidth={maxWidth}
+        controlsId="controls-panel"
         onResize={setWidth}
         onNudge={nudgeWidth}
         onReset={resetWidth}
@@ -384,7 +379,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                                 ...tmpl.config,
                                 captionText: config.captionText || tmpl.config.captionText,
                                 subCaptionText: config.subCaptionText || tmpl.config.subCaptionText,
-                                photoCount: config.photoCount || tmpl.config.photoCount
+                                photoCount: config.photoCount ?? tmpl.config.photoCount
                               })
                             }
                           />
@@ -407,7 +402,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                         ...tmpl.config,
                         captionText: config.captionText || tmpl.config.captionText,
                         subCaptionText: config.subCaptionText || tmpl.config.subCaptionText,
-                        photoCount: config.photoCount || tmpl.config.photoCount
+                        photoCount: config.photoCount ?? tmpl.config.photoCount
                       })
                     }
                   />
@@ -452,7 +447,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               <label className="text-xs font-black uppercase tracking-widest text-[#AAAAAA] mb-2 block">
                 2. Upload Photos ({photos.length}/8)
               </label>
-              <p className="text-[#666666] text-[11px]">Upload 3 to 8 photos or snap live shots with webcam.</p>
+              <p className="text-[#666666] text-[11px]">Upload up to 8 photos or snap live shots with webcam.</p>
               {photos.length > config.photoCount && (
                 <p className="text-[#FF6B6B] text-[11px] font-semibold mt-1.5">
                   Showing first {config.photoCount} of {photos.length} photos — raise Photos Per
@@ -544,6 +539,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                       <button
                         onClick={() => movePhoto(idx, 'up')}
                         disabled={idx === 0}
+                        title={`Move photo ${idx + 1} up`}
+                        aria-label={`Move photo ${idx + 1} up`}
                         className="p-1 hover:text-[#FF6B6B] text-[#999999] disabled:opacity-20"
                       >
                         <MoveUp className="w-3.5 h-3.5" />
@@ -551,12 +548,16 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                       <button
                         onClick={() => movePhoto(idx, 'down')}
                         disabled={idx === photos.length - 1}
+                        title={`Move photo ${idx + 1} down`}
+                        aria-label={`Move photo ${idx + 1} down`}
                         className="p-1 hover:text-[#FF6B6B] text-[#999999] disabled:opacity-20"
                       >
                         <MoveDown className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => onRemovePhoto(p.id)}
+                        title={`Remove photo ${idx + 1}`}
+                        aria-label={`Remove photo ${idx + 1}`}
                         className="p-1 text-[#FF6B6B] hover:text-[#ff5252] ml-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -680,6 +681,12 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               <p className="text-[11px] text-[#666666]">
                 Strip size stays the same at every count. At 5 and 6, photos sit flush against each
                 other — the strip keeps its outer margin.
+                {config.style === 'boothycall' && (
+                  <span className="block mt-1 text-[#666666]">
+                    Boothy Call is the exception: its strip grows with the count so the circular
+                    photos stay perfectly round.
+                  </span>
+                )}
               </p>
             </div>
 
