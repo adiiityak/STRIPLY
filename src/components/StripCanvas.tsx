@@ -129,6 +129,86 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
       return () => observer.disconnect();
     }, []);
 
+    // Sticker dragging. Positions are percentages of the canvas box, so the delta is measured
+    // against the canvas's *bounding rect*: that rect is in the same scaled screen space as the
+    // pointer, which makes the drag correct at every zoom level. Using offsetWidth instead would
+    // make stickers lag at 140% and overshoot at 60%.
+    const stickerDrag = React.useRef<{
+      id: string;
+      pointerId: number;
+      startX: number;
+      startY: number;
+      originX: number;
+      originY: number;
+    } | null>(null);
+
+    const clampPercent = (n: number) => Math.min(100, Math.max(0, n));
+
+    const handleStickerPointerDown = (
+      event: React.PointerEvent<HTMLDivElement>,
+      stk: PlacedSticker
+    ) => {
+      if (event.button !== 0) return;
+      // Keep the canvas pan gesture from also starting.
+      event.stopPropagation();
+      setSelectedStickerId(stk.id);
+      stickerDrag.current = {
+        id: stk.id,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: stk.x,
+        originY: stk.y
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const handleStickerPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = stickerDrag.current;
+      const canvas = canvasElRef.current;
+      if (!drag || !canvas || event.pointerId !== drag.pointerId) return;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      event.stopPropagation();
+      const dxPct = ((event.clientX - drag.startX) / rect.width) * 100;
+      const dyPct = ((event.clientY - drag.startY) / rect.height) * 100;
+      onUpdateSticker?.(drag.id, {
+        x: clampPercent(drag.originX + dxPct),
+        y: clampPercent(drag.originY + dyPct)
+      });
+    };
+
+    const handleStickerPointerEnd = (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = stickerDrag.current;
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      stickerDrag.current = null;
+    };
+
+    // Dragging is pointer-only, so stickers are also nudgeable from the keyboard.
+    const handleStickerKeyDown = (
+      event: React.KeyboardEvent<HTMLDivElement>,
+      stk: PlacedSticker
+    ) => {
+      const step = event.shiftKey ? 5 : 1;
+      let dx = 0;
+      let dy = 0;
+      if (event.key === 'ArrowLeft') dx = -step;
+      else if (event.key === 'ArrowRight') dx = step;
+      else if (event.key === 'ArrowUp') dy = -step;
+      else if (event.key === 'ArrowDown') dy = step;
+      else return;
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedStickerId(stk.id);
+      onUpdateSticker?.(stk.id, {
+        x: clampPercent(stk.x + dx),
+        y: clampPercent(stk.y + dy)
+      });
+    };
+
     // Sticker animation class
     const getStickerAnimClass = (animMode?: string) => {
       switch (animMode) {
@@ -1026,11 +1106,20 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             return (
               <div
                 key={stk.id}
+                data-no-pan
+                role="button"
+                tabIndex={0}
+                aria-label={`Sticker ${stk.symbol}. Drag to move, or use arrow keys.`}
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedStickerId(stk.id);
                 }}
-                className={`absolute cursor-grab active:cursor-grabbing z-30 transition-shadow ${animClass} ${
+                onPointerDown={(e) => handleStickerPointerDown(e, stk)}
+                onPointerMove={handleStickerPointerMove}
+                onPointerUp={handleStickerPointerEnd}
+                onPointerCancel={handleStickerPointerEnd}
+                onKeyDown={(e) => handleStickerKeyDown(e, stk)}
+                className={`absolute cursor-grab active:cursor-grabbing z-30 transition-shadow touch-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF6B6B] ${animClass} ${
                   selectedStickerId === stk.id ? 'ring-2 ring-[#FF6B6B] rounded-lg p-1 bg-white/40' : ''
                 }`}
                 style={{

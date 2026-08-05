@@ -10,6 +10,7 @@ import { SAMPLE_PHOTO_SETS, SampleSet } from './data/samplePhotos';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
 import { downloadStripAsPNG, downloadStripAsPDF, exportStripToDataUrl } from './utils/exportUtils';
+import { useCanvasPan } from './hooks/useCanvasPan';
 import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const DEFAULT_TEMPLATE_ID = 'airmail';
@@ -25,6 +26,13 @@ export default function App() {
 
   // Canvas ref for html-to-image exports
   const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  // Drag-to-pan the strip. The scroll container is <main>; anything marked data-no-pan
+  // (the zoom toolbar, the sticker layer) keeps its own gestures.
+  const viewportRef = useRef<HTMLElement | null>(null);
+  const { isPanning, canPan, centre } = useCanvasPan(viewportRef, {
+    ignoreSelector: '[data-no-pan]'
+  });
 
   // Zoom & Modal States
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
@@ -215,9 +223,17 @@ export default function App() {
         {/* Middle Canvas Preview Area */}
         {/* Centring is done with my-auto on the strip wrapper rather than justify-center:
             auto margins still allow scrolling to the top once the strip overflows. */}
-        <main className="flex-1 lg:min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto min-h-[320px] max-h-[60vh] lg:max-h-none">
+        <main
+          ref={viewportRef}
+          className={`flex-1 lg:min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto min-h-[320px] max-h-[60vh] lg:max-h-none ${
+            isPanning ? 'cursor-grabbing' : canPan ? 'cursor-grab' : ''
+          }`}
+        >
           {/* Canvas Zoom Toolbar floating top-right */}
-          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-[#E8E6DF] rounded-2xl p-1.5 flex items-center gap-1 shadow-md z-20 text-xs text-[#2D2D2D]">
+          <div
+            data-no-pan
+            className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-[#E8E6DF] rounded-2xl p-1.5 flex items-center gap-1 shadow-md z-20 text-xs text-[#2D2D2D]"
+          >
             <button
               onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.1))}
               className="p-1.5 hover:bg-[#FAF9F6] text-[#666666] hover:text-[#2D2D2D] rounded-xl transition-colors"
@@ -236,8 +252,17 @@ export default function App() {
               <ZoomIn className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setZoomLevel(1.0)}
+              onClick={() => {
+                setZoomLevel(1.0);
+                // Reset undoes panning too, otherwise the strip stays wherever it was dragged.
+                // The strip wrapper animates its size over 200ms, so centring on the next frame
+                // would measure the pre-reset extents and get clamped. Centre once immediately for
+                // responsiveness, then again after the transition settles on the final size.
+                requestAnimationFrame(centre);
+                window.setTimeout(centre, 260);
+              }}
               className="px-2 py-1 hover:bg-[#FAF9F6] text-[#666666] hover:text-[#2D2D2D] rounded-xl text-[11px] font-bold transition-colors border-l border-[#E8E6DF]"
+              title="Reset zoom and recentre the strip"
             >
               Reset
             </button>
