@@ -71,13 +71,15 @@
   animation: blinkCursor 0.8s infinite;
 }
 
-/* Used by the tool rail and the horizontal category strips inside the panel. */
-.no-scrollbar {
+/* Used by the tool rail (with an `lg:` variant, so it must be a Tailwind 4 @utility — a
+   hand-written class cannot take a variant prefix). The horizontal category strips wrap
+   instead of scrolling, so they don't use this. */
+@utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Used by the controls panel content pane. */
