@@ -53,6 +53,7 @@ import {
   Mail
 } from 'lucide-react';
 import { BoardingPassInfo, TicketInfo, MusicTrackInfo, LockscreenInfo, AirMailInfo } from '../types';
+import { computeSlotLayout, FLUSH_THRESHOLD } from '../utils/stripLayout';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { ToolRail, type ToolId } from './ToolRail';
 import { ResizeHandle } from './ResizeHandle';
@@ -165,6 +166,12 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   const updateConfig = (updates: Partial<StripConfiguration>) => {
     onChangeConfig({ ...config, ...updates });
   };
+
+  // The strip forces the inter-photo gap to 0 from FLUSH_THRESHOLD up, so the Photo Gap slider is
+  // a no-op there. `config.photoGap` is left untouched, so lowering the count restores the user's
+  // value; the readout comes from the same helper the canvas uses so the two cannot drift.
+  const isGapFlush = config.photoCount >= FLUSH_THRESHOLD;
+  const renderedGap = computeSlotLayout(config.photoCount, config.photoGap).gap;
 
   const updateBoardingPass = (updates: Partial<BoardingPassInfo>) => {
     updateConfig({
@@ -376,7 +383,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                               onChangeConfig({
                                 ...tmpl.config,
                                 captionText: config.captionText || tmpl.config.captionText,
-                                subCaptionText: config.subCaptionText || tmpl.config.subCaptionText
+                                subCaptionText: config.subCaptionText || tmpl.config.subCaptionText,
+                                photoCount: config.photoCount || tmpl.config.photoCount
                               })
                             }
                           />
@@ -398,7 +406,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                       onChangeConfig({
                         ...tmpl.config,
                         captionText: config.captionText || tmpl.config.captionText,
-                        subCaptionText: config.subCaptionText || tmpl.config.subCaptionText
+                        subCaptionText: config.subCaptionText || tmpl.config.subCaptionText,
+                        photoCount: config.photoCount || tmpl.config.photoCount
                       })
                     }
                   />
@@ -444,6 +453,12 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 2. Upload Photos ({photos.length}/8)
               </label>
               <p className="text-[#666666] text-[11px]">Upload 3 to 8 photos or snap live shots with webcam.</p>
+              {photos.length > config.photoCount && (
+                <p className="text-[#FF6B6B] text-[11px] font-semibold mt-1.5">
+                  Showing first {config.photoCount} of {photos.length} photos — raise Photos Per
+                  Strip to include the rest.
+                </p>
+              )}
             </div>
 
             {/* File Upload Drop Area */}
@@ -663,7 +678,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 ))}
               </div>
               <p className="text-[11px] text-[#666666]">
-                Strip size stays the same at every count. 5 and 6 sit flush with no gap.
+                Strip size stays the same at every count. At 5 and 6, photos sit flush against each
+                other — the strip keeps its outer margin.
               </p>
             </div>
 
@@ -686,17 +702,24 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
 
               <div>
                 <div className="flex justify-between text-[#666666] mb-1 font-semibold">
-                  <span>Photo Gap:</span>
-                  <span className="text-[#2D2D2D]">{config.photoGap}px</span>
+                  <span>Photo Gap{isGapFlush ? ' (flush)' : ''}:</span>
+                  <span className="text-[#2D2D2D]">{renderedGap}px</span>
                 </div>
                 <input
                   type="range"
                   min="4"
                   max="32"
                   value={config.photoGap}
+                  disabled={isGapFlush}
                   onChange={(e) => updateConfig({ photoGap: parseInt(e.target.value) })}
-                  className="w-full accent-[#FF6B6B] bg-[#E8E6DF] rounded-lg"
+                  className="w-full accent-[#FF6B6B] bg-[#E8E6DF] rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
                 />
+                {isGapFlush && (
+                  <p className="text-[11px] text-[#666666] mt-1">
+                    Photos sit flush at {config.photoCount} — your {config.photoGap}px gap returns
+                    below {FLUSH_THRESHOLD}.
+                  </p>
+                )}
               </div>
 
               <div>
