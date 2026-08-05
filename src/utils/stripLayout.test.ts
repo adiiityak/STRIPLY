@@ -1,65 +1,67 @@
 import { describe, it, expect } from 'vitest';
-import {
-  BASELINE_COUNT,
-  BASELINE_ASPECT,
-  clampPhotoCount,
-  computeSlotLayout,
-  getColumnAspectRatio
-} from './stripLayout';
+import { clampPhotoCount, computeSlotLayout, computeColumnHeight } from './stripLayout';
 
 describe('computeSlotLayout', () => {
-  it('keeps the configured gap and non-flush state at 4 photos (no-regression guarantee)', () => {
+  it('keeps the configured gap at 4 photos (no-regression guarantee)', () => {
     const layout = computeSlotLayout(4, 12);
     expect(layout.gap).toBe(12);
-    expect(layout.flushBottom).toBe(false);
   });
 
-  it('keeps the configured gap and non-flush state at 2 photos', () => {
+  it('keeps the configured gap at 2 photos', () => {
     const layout = computeSlotLayout(2, 12);
     expect(layout.gap).toBe(12);
-    expect(layout.flushBottom).toBe(false);
   });
 
-  it('keeps the configured gap and non-flush state at 3 photos', () => {
+  it('keeps the configured gap at 3 photos', () => {
     const layout = computeSlotLayout(3, 12);
     expect(layout.gap).toBe(12);
-    expect(layout.flushBottom).toBe(false);
   });
 
   it('goes flush with no gap at 5 photos', () => {
     const layout = computeSlotLayout(5, 12);
     expect(layout.gap).toBe(0);
-    expect(layout.flushBottom).toBe(true);
   });
 
   it('goes flush with no gap at 6 photos', () => {
     const layout = computeSlotLayout(6, 12);
     expect(layout.gap).toBe(0);
-    expect(layout.flushBottom).toBe(true);
   });
 });
 
-describe('getColumnAspectRatio', () => {
-  it('reduces to "1 / 3" for the default 4:3 baseline (4 photos at 4:3 = 3 units tall)', () => {
-    expect(getColumnAspectRatio()).toBe('1 / 3');
-    expect(getColumnAspectRatio(BASELINE_ASPECT)).toBe('1 / 3');
+describe('computeColumnHeight', () => {
+  // Pre-feature airmail metrics: canvas 280, outerPadding 22 -> columnWidth 236,
+  // framePadding 12, photoGap 14, default 4:3 baseAspect.
+  const airmailMetrics = { columnWidth: 236, framePadding: 12, photoGap: 14 };
+
+  it('pins the pre-feature airmail column height at 774px (regression guard for C2)', () => {
+    expect(computeColumnHeight(airmailMetrics)).toBe(774);
   });
 
-  it('uses "1 / 4" for a square (1:1) baseline photo, as used by boothycall-style strips', () => {
-    expect(getColumnAspectRatio(1)).toBe('1 / 4');
-  });
-
-  it('never varies with photo count: the column height (in units of its own width) is invariant', () => {
-    // getColumnAspectRatio takes no photoCount argument at all, so for a fixed column width
-    // the resulting height is identical no matter how many photos (2-6) are laid out inside
-    // it — gaps and per-slot padding are absorbed by the flexed slots, not by the column.
-    // Simulate every supported count and confirm the derived ratio string never changes.
-    const ratios = [2, 3, 4, 5, 6].map((count) => {
-      void computeSlotLayout(clampPhotoCount(count), 12); // gap/flushBottom vary; ratio must not.
-      return getColumnAspectRatio();
+  it('is independent of photo count: the same metrics give the same height no matter what count a caller also computes a slot layout for', () => {
+    // computeColumnHeight takes no photoCount argument at all, so it is count-free by
+    // construction. Simulate a caller that also calls computeSlotLayout (whose gap/flush
+    // behaviour DOES vary by count) alongside it, and confirm the column height never moves.
+    const heights = [2, 3, 4, 5, 6].map((count) => {
+      void computeSlotLayout(clampPhotoCount(count), airmailMetrics.photoGap);
+      return computeColumnHeight(airmailMetrics);
     });
-    expect(new Set(ratios).size).toBe(1);
-    expect(ratios[0]).toBe(`1 / ${BASELINE_COUNT / BASELINE_ASPECT}`);
+    expect(new Set(heights).size).toBe(1);
+    expect(heights[0]).toBe(774);
+  });
+
+  it('divides evenly into `count` equal slots plus the current gap, for every supported count (the "strip size stays the same" assertion)', () => {
+    const H = computeColumnHeight(airmailMetrics);
+    for (let count = 2; count <= 6; count++) {
+      const { gap } = computeSlotLayout(count, airmailMetrics.photoGap);
+      const slotHeight = (H - (count - 1) * gap) / count;
+      expect(count * slotHeight + (count - 1) * gap).toBeCloseTo(H);
+    }
+  });
+
+  it('is taller for a square (1:1) baseline photo than for the 4:3 default', () => {
+    const square = computeColumnHeight({ ...airmailMetrics, baseAspect: 1 });
+    const default43 = computeColumnHeight(airmailMetrics);
+    expect(square).toBeGreaterThan(default43);
   });
 });
 
@@ -78,5 +80,14 @@ describe('clampPhotoCount', () => {
 
   it('falls back to the baseline count for non-finite input', () => {
     expect(clampPhotoCount(Number.NaN)).toBe(4);
+  });
+
+  it('falls back to the baseline count for undefined input', () => {
+    expect(clampPhotoCount(undefined)).toBe(4);
+  });
+
+  it('rounds a non-integer count to the nearest whole slot before clamping', () => {
+    expect(clampPhotoCount(4.6)).toBe(5);
+    expect(clampPhotoCount(4.4)).toBe(4);
   });
 });

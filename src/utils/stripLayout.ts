@@ -2,37 +2,42 @@ export const BASELINE_COUNT = 4;
 export const BASELINE_ASPECT = 4 / 3; // width / height
 export const MIN_PHOTO_COUNT = 2;
 export const MAX_PHOTO_COUNT = 6;
-/** Counts at or above this lose the inter-photo gap and the space below the photos. */
+/** Counts at or above this lose the inter-photo gap only; the strip's outer margin is unaffected. */
 export const FLUSH_THRESHOLD = 5;
 
 export interface StripSlotLayout {
   /** px gap between photo slots. */
   gap: number;
-  /** True when the strip should have no padding below the photo column. */
-  flushBottom: boolean;
 }
 
-export function clampPhotoCount(count: number): number {
-  if (!Number.isFinite(count)) return BASELINE_COUNT;
-  return Math.min(MAX_PHOTO_COUNT, Math.max(MIN_PHOTO_COUNT, count));
+export function clampPhotoCount(count: number | undefined): number {
+  if (count === undefined || !Number.isFinite(count)) return BASELINE_COUNT;
+  // Photo counts are whole slots (2-6): round a fractional caller-supplied value before clamping.
+  const rounded = Math.round(count);
+  return Math.min(MAX_PHOTO_COUNT, Math.max(MIN_PHOTO_COUNT, rounded));
 }
 
 export function computeSlotLayout(photoCount: number, configuredGap: number): StripSlotLayout {
-  const flushBottom = photoCount >= FLUSH_THRESHOLD;
-  const gap = flushBottom ? 0 : configuredGap;
+  const gap = photoCount >= FLUSH_THRESHOLD ? 0 : configuredGap;
+  return { gap };
+}
 
-  return { gap, flushBottom };
+export interface ColumnMetrics {
+  /** Usable width of the photo column in px. */
+  columnWidth: number;
+  framePadding: number;
+  photoGap: number;
+  /** width / height of a single photo box at the baseline. */
+  baseAspect?: number;
 }
 
 /**
- * The photo column's fixed height, expressed as a CSS `aspect-ratio` of its own width
- * (`"1 / N"`, i.e. column height = N x column width). N is the baseline (4-photo) total
- * photo height in units of photo width, so it depends only on `baseAspect` — never on
- * `photoCount`. That is what makes the column height identical for every photo count
- * (2-6): gaps and per-slot padding are absorbed by the flexed slots inside the column
- * rather than adding to the column's own height.
+ * Height of the photo column in px, fixed at the 4-photo baseline so every count shares it:
+ * 4 baseline slots plus the 3 gaps between them. Independent of the current count by design.
  */
-export function getColumnAspectRatio(baseAspect: number = BASELINE_ASPECT): string {
-  const totalPhotoHeightUnits = BASELINE_COUNT / baseAspect;
-  return `1 / ${totalPhotoHeightUnits}`;
+export function computeColumnHeight(m: ColumnMetrics): number {
+  const baseAspect = m.baseAspect ?? BASELINE_ASPECT;
+  const photoBoxWidth = m.columnWidth - 2 * m.framePadding;
+  const baselineSlotHeight = 2 * m.framePadding + photoBoxWidth / baseAspect;
+  return BASELINE_COUNT * baselineSlotHeight + (BASELINE_COUNT - 1) * m.photoGap;
 }
