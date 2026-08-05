@@ -1,7 +1,7 @@
 import React from 'react';
 import { PhotoItem, StripConfiguration, PlacedSticker } from '../types';
 import { getFilterCSS, getFadeOpacity } from '../utils/filterUtils';
-import { computeSlotLayout, clampPhotoCount, getColumnAspectRatio } from '../utils/stripLayout';
+import { computeSlotLayout, clampPhotoCount, computeColumnHeight } from '../utils/stripLayout';
 import {
   Trash2,
   RotateCw,
@@ -167,11 +167,55 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
     const filterCSS = getFilterCSS(config.filter);
     const fadeOverlayOpacity = getFadeOpacity(config.filter);
 
-    // Slot geometry: holds strip height constant across photo counts (2-6); 5 and 6 go flush.
+    // Slot geometry: holds strip height constant across photo counts (2-6); 5 and 6 go flush
+    // (gap only — the strip's own outer margin never changes, see C1).
     const slotCount = clampPhotoCount(config.photoCount);
-    const baseAspect = config.style === 'boothycall' ? 1 : undefined;
     const slotLayout = computeSlotLayout(slotCount, config.photoGap);
-    const columnAspectRatio = getColumnAspectRatio(baseAspect);
+    const hasExtraSidePadding = config.style === 'film' || config.style === 'selene';
+
+    // I3: boothycall's round photo boxes are that template's identity, so this one style opts out
+    // of the shared fixed-height column: the box stays square and the column and its slots size to
+    // content. Every other style fills the fixed-height column via flex. This is the only place
+    // the style is branched on for sizing — nothing downstream re-tests it except the border
+    // radius that makes the square a circle.
+    const isBoothycall = config.style === 'boothycall';
+    const {
+      sizesToContent: columnSizesToContent,
+      slot: slotFlexStyle,
+      photoBox: photoBoxStyle
+    }: {
+      sizesToContent: boolean;
+      slot: React.CSSProperties;
+      photoBox: React.CSSProperties;
+    } = isBoothycall
+      ? {
+          sizesToContent: true,
+          slot: {},
+          photoBox: { aspectRatio: '1', width: '100%', height: 'auto' }
+        }
+      : {
+          sizesToContent: false,
+          slot: { flex: '1 1 0', minHeight: 0 },
+          photoBox: { flex: '1 1 0', minHeight: 0 }
+        };
+
+    // C2: the column's height is fixed at the 4-photo baseline (independent of the current
+    // count) so the strip is the same size at every count. Derive it from the real canvas
+    // width in px, not an aspect-ratio shortcut that ignored gaps and frame padding.
+    const canvasWidthPx = parseFloat(getCanvasWidth(config.exportFormat));
+    const columnWidth =
+      canvasWidthPx - 2 * config.outerPadding - (hasExtraSidePadding ? 40 : 0);
+    const columnHeight = computeColumnHeight({
+      columnWidth,
+      framePadding: config.framePadding,
+      photoGap: config.photoGap
+    });
+
+    // I3: boothycall's column sizes to content instead. I6: an empty strip has no photos to fill a
+    // fixed height, so content-size then too and let the h-64 placeholder set the height rather
+    // than leaving a tall blank column.
+    const columnHeightPx =
+      columnSizesToContent || photos.length === 0 ? undefined : `${columnHeight}px`;
 
     // Frame style classes
     const getFrameContainerClass = () => {
@@ -233,7 +277,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 ? getPatternBackground(config.background.patternName, config.background.color)
                 : undefined,
             width: getCanvasWidth(config.exportFormat),
-            padding: `${config.outerPadding}px ${config.outerPadding}px ${slotLayout.flushBottom ? 0 : config.outerPadding}px`,
+            padding: `${config.outerPadding}px`,
             fontFamily: getFontFamily(config.fontType)
           }}
         >
@@ -478,16 +522,16 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             className="w-full flex flex-col items-center"
             style={{
               gap: `${slotLayout.gap}px`,
-              aspectRatio: columnAspectRatio,
-              paddingLeft: config.style === 'film' || config.style === 'selene' ? '20px' : '0px',
-              paddingRight: config.style === 'film' || config.style === 'selene' ? '20px' : '0px'
+              height: columnHeightPx,
+              paddingLeft: hasExtraSidePadding ? '20px' : '0px',
+              paddingRight: hasExtraSidePadding ? '20px' : '0px'
             }}
           >
             {photos.length === 0 ? (
               <div className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400">
                 <Sparkles className="w-8 h-8 mb-2 opacity-50" />
                 <p className="text-sm font-medium">No photos added yet</p>
-                <p className="text-xs">Upload 3-8 photos to render strip</p>
+                <p className="text-xs">Upload photos to render strip</p>
               </div>
             ) : (
               <>
@@ -497,8 +541,12 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   onClick={() => onEditPhoto?.(photo)}
                   className={`group relative w-full cursor-pointer transition-transform hover:scale-[1.01] ${getFrameContainerClass()}`}
                   style={{
-                    flex: '1 1 0',
-                    minHeight: 0,
+                    // I7: the slot is a flex column so the photo box (flex: 1 1 0, minHeight: 0)
+                    // shares space with in-flow siblings (polaroid caption; film/selene numbering)
+                    // instead of overflowing past them.
+                    display: 'flex',
+                    flexDirection: 'column',
+                    ...slotFlexStyle,
                     backgroundColor:
                       config.style === 'polaroid'
                         ? '#ffffff'
@@ -532,8 +580,8 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   <div
                     className="relative w-full overflow-hidden bg-zinc-100"
                     style={{
-                      height: '100%',
-                      borderRadius: config.style === 'boothycall' ? '9999px' : `${config.photoBorderRadius}px`
+                      ...photoBoxStyle,
+                      borderRadius: isBoothycall ? '9999px' : `${config.photoBorderRadius}px`
                     }}
                   >
                     {/* Image with Filter */}
@@ -609,7 +657,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 <div
                   key={`placeholder-${i}`}
                   className="w-full border-2 border-dashed border-zinc-300"
-                  style={{ flex: '1 1 0', minHeight: 0 }}
+                  style={slotFlexStyle}
                 />
               ))}
               </>
