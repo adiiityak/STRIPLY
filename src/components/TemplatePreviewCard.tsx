@@ -26,23 +26,23 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
       title={template.tagline}
       aria-label={template.name}
       aria-pressed={selected}
-      className={`group min-w-[132px] snap-center shrink-0 overflow-hidden rounded-xl border bg-white text-left transition-all md:min-w-0 ${
+      className={`group w-20 min-w-20 snap-center shrink-0 overflow-hidden rounded-lg border bg-white text-left transition-all ${
         selected
           ? 'border-2 border-[#FF6B6B] bg-[#FFF5F5] shadow-xs'
           : 'border-[#E8E6DF] hover:border-[#CFCBC1] hover:bg-[#FAF9F6]'
       }`}
     >
-      <div className="aspect-[2/5] overflow-hidden bg-[#FAF9F6] md:aspect-[1/3]">
+      <div className="h-28 overflow-hidden bg-[#FAF9F6] p-1.5">
         {imageFailed ? (
           <div
             data-testid={`template-fallback-${template.id}`}
-            className="flex h-full w-full flex-col items-center justify-center gap-2 p-3 text-center"
+            className="flex h-full w-full flex-col items-center justify-center gap-1 p-1.5 text-center"
             style={{ backgroundColor: template.previewColor }}
           >
-            <span aria-hidden className="text-2xl drop-shadow-sm">
+            <span aria-hidden className="text-lg drop-shadow-sm">
               {CATEGORY_SYMBOLS[template.category]}
             </span>
-            <span className="rounded-full bg-white/80 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#2D2D2D]">
+            <span className="max-w-full truncate rounded-full bg-white/80 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide text-[#2D2D2D]">
               {template.badgeText}
             </span>
           </div>
@@ -58,7 +58,7 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
         )}
       </div>
       <span
-        className={`block px-2.5 py-2 text-center text-[11px] font-black leading-tight ${
+        className={`block truncate px-1 py-1.5 text-center text-[9px] font-black leading-tight ${
           selected ? 'text-[#FF6B6B]' : 'text-[#2D2D2D]'
         }`}
       >

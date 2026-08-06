@@ -377,7 +377,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                         <span className="text-[10px] text-[#888888] font-mono">({catTemplates.length})</span>
                       </div>
 
-                      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
+                      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2">
                         {catTemplates.map((tmpl) => (
                           <React.Fragment key={tmpl.id}>
                             <TemplatePreviewCard
@@ -394,7 +394,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </div>
             ) : (
               /* Render single selected category */
-              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
+              <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2">
                 {TEMPLATE_DEFINITIONS.filter((t) => t.category === selectedCategory).map((tmpl) => (
                   <React.Fragment key={tmpl.id}>
                     <TemplatePreviewCard

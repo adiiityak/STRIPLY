@@ -16,8 +16,10 @@ describe('TemplatePreviewCard', () => {
     expect(preview).not.toHaveClass('group-hover:scale-[1.02]');
     expect(preview).toHaveAttribute('loading', 'lazy');
     expect(preview).toHaveAttribute('decoding', 'async');
-    expect(preview.parentElement).toHaveClass('aspect-[2/5]', 'md:aspect-[1/3]');
-    expect(screen.getByRole('button', { name: template.name })).toHaveAttribute('aria-pressed', 'true');
+    expect(preview.parentElement).toHaveClass('h-28');
+    const button = screen.getByRole('button', { name: template.name });
+    expect(button).toHaveClass('w-20', 'min-w-20');
+    expect(button).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows the color fallback when the preview cannot load', () => {
