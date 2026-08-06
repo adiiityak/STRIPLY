@@ -1,3 +1,5 @@
+import type { PhotoLayout } from '../types';
+
 export const BASELINE_COUNT = 4;
 export const BASELINE_ASPECT = 4 / 3; // width / height
 export const MIN_PHOTO_COUNT = 2;
@@ -31,6 +33,13 @@ export interface ColumnMetrics {
   baseAspect?: number;
 }
 
+export interface PhotoAreaLayout {
+  columns: 1 | 2;
+  rows: 2 | 4;
+  gap: number;
+  height: number;
+}
+
 /**
  * Height of the photo column in px, fixed at the 4-photo baseline so every count shares it:
  * 4 baseline slots plus the 3 gaps between them. Independent of the current count by design.
@@ -40,4 +49,29 @@ export function computeColumnHeight(m: ColumnMetrics): number {
   const photoBoxWidth = m.columnWidth - 2 * m.framePadding;
   const baselineSlotHeight = 2 * m.framePadding + photoBoxWidth / baseAspect;
   return BASELINE_COUNT * baselineSlotHeight + (BASELINE_COUNT - 1) * m.photoGap;
+}
+
+export function computePhotoAreaLayout(
+  layout: PhotoLayout,
+  metrics: ColumnMetrics
+): PhotoAreaLayout {
+  if (layout === 'vertical-1x4') {
+    return {
+      columns: 1,
+      rows: 4,
+      gap: metrics.photoGap,
+      height: computeColumnHeight(metrics)
+    };
+  }
+
+  const cellWidth = (metrics.columnWidth - metrics.photoGap) / 2;
+  const photoWidth = cellWidth - 2 * metrics.framePadding;
+  const slotHeight =
+    2 * metrics.framePadding + photoWidth / (metrics.baseAspect ?? BASELINE_ASPECT);
+  return {
+    columns: 2,
+    rows: 2,
+    gap: metrics.photoGap,
+    height: 2 * slotHeight + metrics.photoGap
+  };
 }

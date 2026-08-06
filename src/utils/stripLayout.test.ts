@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { clampPhotoCount, computeSlotLayout, computeColumnHeight } from './stripLayout';
+import {
+  clampPhotoCount,
+  computeSlotLayout,
+  computeColumnHeight,
+  computePhotoAreaLayout
+} from './stripLayout';
 
 describe('computeSlotLayout', () => {
   it('keeps the configured gap at 4 photos (no-regression guarantee)', () => {
@@ -62,6 +67,27 @@ describe('computeColumnHeight', () => {
     const square = computeColumnHeight({ ...airmailMetrics, baseAspect: 1 });
     const default43 = computeColumnHeight(airmailMetrics);
     expect(square).toBeGreaterThan(default43);
+  });
+});
+
+describe('computePhotoAreaLayout', () => {
+  const metrics = { columnWidth: 236, framePadding: 12, photoGap: 14 };
+
+  it('keeps the existing 774px vertical photo area', () => {
+    expect(computePhotoAreaLayout('vertical-1x4', metrics)).toEqual({
+      columns: 1,
+      rows: 4,
+      gap: 14,
+      height: 774
+    });
+  });
+
+  it('calculates two equal columns and rows without changing 4:3 photo proportions', () => {
+    const layout = computePhotoAreaLayout('grid-2x2', metrics);
+    expect(layout.columns).toBe(2);
+    expect(layout.rows).toBe(2);
+    expect(layout.gap).toBe(14);
+    expect(layout.height).toBeCloseTo(192.5);
   });
 });
 

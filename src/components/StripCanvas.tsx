@@ -1,7 +1,12 @@
 import React from 'react';
 import { PhotoItem, StripConfiguration, PlacedSticker } from '../types';
 import { getFilterCSS, getFadeOpacity } from '../utils/filterUtils';
-import { computeSlotLayout, clampPhotoCount, computeColumnHeight } from '../utils/stripLayout';
+import {
+  computeSlotLayout,
+  clampPhotoCount,
+  computePhotoAreaLayout
+} from '../utils/stripLayout';
+import { normalizePhotoLayout } from '../utils/photoLayout';
 import {
   Trash2,
   RotateCw,
@@ -244,7 +249,8 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
 
     // Slot geometry: holds strip height constant across photo counts (2-6); 5 and 6 go flush
     // (gap only — the strip's own outer margin never changes, see C1).
-    const slotCount = clampPhotoCount(config.photoCount);
+    const photoLayout = normalizePhotoLayout(config.photoLayout);
+    const slotCount = photoLayout === 'grid-2x2' ? 4 : clampPhotoCount(config.photoCount);
     const slotLayout = computeSlotLayout(slotCount, config.photoGap);
     const hasExtraSidePadding = config.style === 'film' || config.style === 'selene';
 
@@ -280,18 +286,41 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
     const canvasWidthPx = parseFloat(getCanvasWidth(config.exportFormat));
     const columnWidth =
       canvasWidthPx - 2 * config.outerPadding - (hasExtraSidePadding ? 40 : 0);
-    const columnHeight = computeColumnHeight({
+    const photoArea = computePhotoAreaLayout(photoLayout, {
       columnWidth,
       framePadding: config.framePadding,
+      // Vertical strips retain their baseline height even when their fifth and sixth slots
+      // intentionally render flush. The grid always uses four slots, so its configured and
+      // rendered gaps are the same.
       photoGap: config.photoGap
     });
+
+    const photoAreaStyle: React.CSSProperties =
+      photoLayout === 'grid-2x2'
+        ? {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
+            gap: `${photoArea.gap}px`,
+            height: `${photoArea.height}px`
+          }
+        : {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: `${slotLayout.gap}px`,
+            height:
+              columnSizesToContent || photos.length === 0 ? undefined : `${photoArea.height}px`
+          };
+
+    const slotStyle: React.CSSProperties =
+      photoLayout === 'grid-2x2'
+        ? { minWidth: 0, minHeight: 0, height: '100%' }
+        : slotFlexStyle;
 
     // I3: boothycall's column sizes to content instead. I6: an empty strip has no photos to fill a
     // fixed height, so content-size then too and let the h-64 placeholder set the height rather
     // than leaving a tall blank column.
-    const columnHeightPx =
-      columnSizesToContent || photos.length === 0 ? undefined : `${columnHeight}px`;
-
     // Frame style classes
     const getFrameContainerClass = () => {
       switch (config.frameType) {
@@ -594,10 +623,9 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
 
           {/* MAIN PHOTO COLUMN */}
           <div
-            className="w-full flex flex-col items-center"
+            className="w-full"
             style={{
-              gap: `${slotLayout.gap}px`,
-              height: columnHeightPx,
+              ...photoAreaStyle,
               paddingLeft: hasExtraSidePadding ? '20px' : '0px',
               paddingRight: hasExtraSidePadding ? '20px' : '0px'
             }}
@@ -621,7 +649,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                     // instead of overflowing past them.
                     display: 'flex',
                     flexDirection: 'column',
-                    ...slotFlexStyle,
+                    ...slotStyle,
                     backgroundColor:
                       config.style === 'polaroid'
                         ? '#ffffff'
@@ -732,7 +760,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 <div
                   key={`placeholder-${i}`}
                   className="w-full border-2 border-dashed border-zinc-300"
-                  style={slotFlexStyle}
+                  style={slotStyle}
                 />
               ))}
               </>
