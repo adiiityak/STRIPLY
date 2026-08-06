@@ -26,7 +26,7 @@ export default defineConfig(() => {
     test: {
       environment: 'jsdom',
       setupFiles: ['./vitest.setup.ts'],
-      exclude: [...configDefaults.exclude, 'tests/**']
+      exclude: [...configDefaults.exclude, 'tests/**', '.worktrees/**']
     },
   };
 });
