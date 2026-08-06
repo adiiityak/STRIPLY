@@ -152,7 +152,10 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
       return;
     }
 
-    onChangeConfig(applyPhotoLayout(nextConfig, template.supportedLayouts[0]));
+    onChangeConfig({
+      ...applyPhotoLayout(nextConfig, template.supportedLayouts[0]),
+      photoCount: config.photoCount
+    });
   };
 
   // The strip forces the inter-photo gap to 0 from FLUSH_THRESHOLD up, so the Photo Gap slider is
@@ -371,12 +374,13 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
 
                       <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
                         {catTemplates.map((tmpl) => (
-                          <TemplatePreviewCard
-                            key={tmpl.id}
-                            template={tmpl}
-                            selected={config.style === tmpl.id}
-                            onSelect={() => selectTemplate(tmpl)}
-                          />
+                          <React.Fragment key={tmpl.id}>
+                            <TemplatePreviewCard
+                              template={tmpl}
+                              selected={config.style === tmpl.id}
+                              onSelect={() => selectTemplate(tmpl)}
+                            />
+                          </React.Fragment>
                         ))}
                       </div>
                     </div>
@@ -387,12 +391,13 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               /* Render single selected category */
               <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
                 {TEMPLATE_DEFINITIONS.filter((t) => t.category === selectedCategory).map((tmpl) => (
-                  <TemplatePreviewCard
-                    key={tmpl.id}
-                    template={tmpl}
-                    selected={config.style === tmpl.id}
-                    onSelect={() => selectTemplate(tmpl)}
-                  />
+                  <React.Fragment key={tmpl.id}>
+                    <TemplatePreviewCard
+                      template={tmpl}
+                      selected={config.style === tmpl.id}
+                      onSelect={() => selectTemplate(tmpl)}
+                    />
+                  </React.Fragment>
                 ))}
               </div>
             )}

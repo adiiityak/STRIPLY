@@ -10,7 +10,6 @@ const CATEGORY_SYMBOLS: Record<TemplateDefinition['category'], string> = {
 };
 
 interface TemplatePreviewCardProps {
-  key?: string;
   template: TemplateDefinition;
   selected: boolean;
   onSelect: () => void;
