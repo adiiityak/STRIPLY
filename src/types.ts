@@ -32,7 +32,26 @@ export type StripStyle =
   | 'pattern-gingham'
   | 'pattern-lemons'
   | 'pattern-meadow'
-  | 'pattern-denim';
+  | 'pattern-denim'
+  | 'pattern-love-notes'
+  | 'pattern-kiss-letters'
+  | 'pattern-vintage-kisses'
+  | 'pattern-red-gingham'
+  | 'pattern-blue-gingham'
+  | 'pattern-striped-hearts'
+  | 'pattern-wavy-checker'
+  | 'pattern-red-bows'
+  | 'pattern-heart-checker'
+  | 'pattern-pink-heart-tunnel'
+  | 'pattern-evil-eye'
+  | 'pattern-sunflowers'
+  | 'pattern-starry-sunflowers'
+  | 'pattern-lavender-heart'
+  | 'pattern-heart-web'
+  | 'pattern-red-heart-tunnel'
+  | 'pattern-doodle-hearts'
+  | 'pattern-love-type'
+  | 'pattern-love-words';
 
 export type FrameType = 'rounded' | 'square' | 'film' | 'torn' | 'vintage' | 'shadow' | 'borderless' | 'scalloped' | 'ticket' | 'parchment' | 'circle' | 'bowRibbon';
 
@@ -74,9 +93,10 @@ export interface PlacedSticker {
 }
 
 export interface BackgroundSetting {
-  type: 'solid' | 'gradient' | 'pattern';
+  type: 'solid' | 'gradient' | 'pattern' | 'image';
   color: string;
   gradientTo?: string;
+  imageUrl?: string;
   patternName?:
     | 'dots'
     | 'grid'

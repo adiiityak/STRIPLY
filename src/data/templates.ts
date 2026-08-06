@@ -92,6 +92,27 @@ function createPatternTemplate(
   };
 }
 
+function createImagePatternTemplate(
+  id: StripStyle,
+  name: string,
+  fileName: string,
+  previewColor: string
+): TemplateDefinition {
+  const template = createPatternTemplate(id, name, 'grid', previewColor, previewColor);
+  return {
+    ...template,
+    tagline: `${name} uploaded pattern with clean photo frames and no added text`,
+    config: {
+      ...template.config,
+      background: {
+        type: 'image',
+        color: previewColor,
+        imageUrl: `/pattern-backgrounds/${fileName}`
+      }
+    }
+  };
+}
+
 const PATTERN_TEMPLATES: TemplateDefinition[] = [
   createPatternTemplate('pattern-hearts', 'Soft Hearts', 'hearts', '#fff4f6', '#fda4af'),
   createPatternTemplate('pattern-checker', 'Blue Checker', 'checker', '#eff6ff', '#bfdbfe'),
@@ -99,6 +120,33 @@ const PATTERN_TEMPLATES: TemplateDefinition[] = [
   createPatternTemplate('pattern-lemons', 'Lemon Stripe', 'lemons', '#fefce8', '#fde68a'),
   createPatternTemplate('pattern-meadow', 'Garden Meadow', 'meadow', '#ecfdf5', '#86efac'),
   createPatternTemplate('pattern-denim', 'Denim Texture', 'denim', '#315b7d', '#315b7d')
+];
+
+const UPLOADED_PATTERN_TEMPLATES: TemplateDefinition[] = [
+  createImagePatternTemplate('pattern-love-notes', 'Love Notes', 'love-notes.png', '#f4efe6'),
+  createImagePatternTemplate('pattern-kiss-letters', 'Kiss Letters', 'kiss-letters.png', '#d8b28d'),
+  createImagePatternTemplate('pattern-vintage-kisses', 'Vintage Kisses', 'vintage-kisses.png', '#c9aa78'),
+  createImagePatternTemplate('pattern-red-gingham', 'Red Gingham', 'red-gingham.png', '#9f1d20'),
+  createImagePatternTemplate('pattern-blue-gingham', 'Blue Gingham', 'blue-gingham.png', '#9bb6c8'),
+  createImagePatternTemplate('pattern-striped-hearts', 'Striped Hearts', 'striped-hearts.png', '#b8c8be'),
+  createImagePatternTemplate('pattern-wavy-checker', 'Wavy Checker', 'wavy-checker.png', '#ca0e2d'),
+  createImagePatternTemplate('pattern-red-bows', 'Red Bows', 'red-bows.png', '#f4b5bd'),
+  createImagePatternTemplate('pattern-heart-checker', 'Heart Checker', 'heart-checker.png', '#f3afb7'),
+  createImagePatternTemplate('pattern-pink-heart-tunnel', 'Pink Heart Tunnel', 'pink-heart-tunnel.png', '#d9689b'),
+  createImagePatternTemplate('pattern-evil-eye', 'Evil Eye', 'evil-eye.png', '#173b82'),
+  createImagePatternTemplate('pattern-sunflowers', 'Sunflowers', 'sunflowers.png', '#b77713'),
+  createImagePatternTemplate(
+    'pattern-starry-sunflowers',
+    'Starry Sunflowers',
+    'starry-sunflowers.png',
+    '#246a9b'
+  ),
+  createImagePatternTemplate('pattern-lavender-heart', 'Lavender Heart', 'lavender-heart.png', '#a88dc6'),
+  createImagePatternTemplate('pattern-heart-web', 'Heart Web', 'heart-web.png', '#edc9a5'),
+  createImagePatternTemplate('pattern-red-heart-tunnel', 'Red Heart Tunnel', 'red-heart-tunnel.png', '#9f001d'),
+  createImagePatternTemplate('pattern-doodle-hearts', 'Doodle Hearts', 'doodle-hearts.png', '#80040c'),
+  createImagePatternTemplate('pattern-love-type', 'Love Type', 'love-type.png', '#b50008'),
+  createImagePatternTemplate('pattern-love-words', 'Love Words', 'love-words.png', '#fffdf6')
 ];
 
 export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
@@ -1438,5 +1486,6 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       }
     }
   },
-  ...PATTERN_TEMPLATES
+  ...PATTERN_TEMPLATES,
+  ...UPLOADED_PATTERN_TEMPLATES
 ];

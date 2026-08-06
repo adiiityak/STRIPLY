@@ -379,15 +379,21 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             style={{
               backgroundColor: config.background.color,
               backgroundImage:
-                config.background.type === 'gradient' && config.background.gradientTo
+                config.background.type === 'image' && config.background.imageUrl
+                  ? `url("${config.background.imageUrl}")`
+                  : config.background.type === 'gradient' && config.background.gradientTo
                   ? `linear-gradient(to bottom, ${config.background.color}, ${config.background.gradientTo})`
                   : config.background.type === 'pattern'
                   ? getPatternBackground(config.background.patternName, config.background.color)
                   : undefined,
               backgroundSize:
-                config.background.type === 'pattern'
+                config.background.type === 'image'
+                  ? 'cover'
+                  : config.background.type === 'pattern'
                   ? getPatternBackgroundSize(config.background.patternName)
                   : undefined,
+              backgroundPosition: config.background.type === 'image' ? 'center' : undefined,
+              backgroundRepeat: config.background.type === 'image' ? 'no-repeat' : undefined,
               width: getCanvasWidth(config.exportFormat),
               padding: `${config.outerPadding}px`,
               fontFamily: getFontFamily(config.fontType)
