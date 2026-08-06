@@ -8,7 +8,7 @@ export default defineConfig({
     { name: 'mobile-chromium', use: { ...devices['Pixel 7'] } }
   ],
   webServer: {
-    command: 'env DISABLE_HMR=true HOST=127.0.0.1 PORT=4176 node --import tsx server.ts',
+    command: 'env STRIPLY_E2E_HMR_PORT=24679 PORT=4176 node --import tsx server.ts',
     url: 'http://127.0.0.1:4176',
     reuseExistingServer: true
   }
