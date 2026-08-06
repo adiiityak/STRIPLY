@@ -1,5 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, X, RefreshCw, Check, Sparkles, Play, StopCircle } from 'lucide-react';
+import { constrainImageDimensions } from '../utils/exportUtils';
+
+const MAX_CAPTURE_DIMENSION = 1280;
 
 interface WebcamModalProps {
   isOpen: boolean;
@@ -61,8 +64,15 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   const snapFrame = (): string | null => {
     if (!videoRef.current) return null;
     const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth || 640;
-    canvas.height = videoRef.current.videoHeight || 480;
+    const sourceWidth = videoRef.current.videoWidth || 640;
+    const sourceHeight = videoRef.current.videoHeight || 480;
+    const captureSize = constrainImageDimensions(
+      sourceWidth,
+      sourceHeight,
+      MAX_CAPTURE_DIMENSION
+    );
+    canvas.width = captureSize.width;
+    canvas.height = captureSize.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
@@ -71,7 +81,9 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
     ctx.scale(-1, 1);
     ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
-    return canvas.toDataURL('image/jpeg', 0.92);
+    // A bounded JPEG keeps a multi-shot strip below mobile Safari's SVG/data-URL limits when
+    // html-to-image embeds every frame into the exported PNG, PDF, or share attachment.
+    return canvas.toDataURL('image/jpeg', 0.88);
   };
 
   // Start automatic series capture (3... 2... 1... SNAP!)
