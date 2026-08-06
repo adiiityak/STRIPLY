@@ -47,11 +47,12 @@ import {
 } from 'lucide-react';
 import { BoardingPassInfo, TicketInfo, MusicTrackInfo, LockscreenInfo, AirMailInfo } from '../types';
 import { computeSlotLayout, FLUSH_THRESHOLD } from '../utils/stripLayout';
-import { applyPhotoLayout, GUIDED_LAYOUTS } from '../utils/photoLayout';
+import { applyPhotoLayout, GUIDED_LAYOUTS, isLayoutSupported } from '../utils/photoLayout';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { ToolRail, type ToolId } from './ToolRail';
 import { ResizeHandle } from './ResizeHandle';
 import { LayoutPicker } from './LayoutPicker';
+import { TemplatePreviewCard } from './TemplatePreviewCard';
 
 const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
   all: <Sparkles className="w-3.5 h-3.5 text-amber-500 inline" />,
@@ -61,35 +62,6 @@ const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
   music: <Music className="w-3.5 h-3.5 text-purple-500 inline" />,
   vintage: <Film className="w-3.5 h-3.5 text-amber-700 inline" />
 };
-
-const TemplateCard: React.FC<{
-  tmpl: (typeof TEMPLATE_DEFINITIONS)[number];
-  isActive: boolean;
-  onSelect: () => void;
-}> = ({ tmpl, isActive, onSelect }) => (
-  <button
-    onClick={onSelect}
-    title={`${tmpl.name} — ${tmpl.tagline}`}
-    aria-pressed={isActive}
-    className={`aspect-square p-2 rounded-xl border transition-all relative overflow-hidden flex flex-col items-center justify-center gap-1 text-center ${
-      isActive
-        ? 'border-2 border-[#FF6B6B] bg-[#FFF5F5] shadow-xs'
-        : 'border border-[#E8E6DF] bg-white hover:bg-[#FAF9F6]'
-    }`}
-  >
-    <span className="text-base leading-none">{CATEGORY_ICON_MAP[tmpl.category]}</span>
-    <span
-      className={`font-bold text-[10.5px] leading-tight line-clamp-2 ${
-        isActive ? 'text-[#FF6B6B]' : 'text-[#2D2D2D]'
-      }`}
-    >
-      {tmpl.name}
-    </span>
-    <span className="text-[8.5px] font-bold px-1.5 py-0.5 rounded-full bg-[#FAF9F6] text-[#666666] border border-[#E8E6DF] max-w-full truncate">
-      {tmpl.badgeText}
-    </span>
-  </button>
-);
 
 interface ControlsPanelProps {
   photos: PhotoItem[];
@@ -162,6 +134,25 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   // Handle Tab Change
   const updateConfig = (updates: Partial<StripConfiguration>) => {
     onChangeConfig({ ...config, ...updates });
+  };
+
+  const selectTemplate = (template: (typeof TEMPLATE_DEFINITIONS)[number]) => {
+    const nextConfig = {
+      ...template.config,
+      captionText: config.captionText || template.config.captionText,
+      subCaptionText: config.subCaptionText || template.config.subCaptionText
+    };
+
+    if (isLayoutSupported(config.photoLayout, template.supportedLayouts)) {
+      onChangeConfig({
+        ...nextConfig,
+        photoLayout: config.photoLayout,
+        photoCount: config.photoCount
+      });
+      return;
+    }
+
+    onChangeConfig(applyPhotoLayout(nextConfig, template.supportedLayouts[0]));
   };
 
   // The strip forces the inter-photo gap to 0 from FLUSH_THRESHOLD up, so the Photo Gap slider is
@@ -378,20 +369,13 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                         <span className="text-[10px] text-[#888888] font-mono">({catTemplates.length})</span>
                       </div>
 
-                      <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(84px,1fr))]">
+                      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
                         {catTemplates.map((tmpl) => (
-                          <TemplateCard
+                          <TemplatePreviewCard
                             key={tmpl.id}
-                            tmpl={tmpl}
-                            isActive={config.style === tmpl.id}
-                            onSelect={() =>
-                              onChangeConfig({
-                                ...tmpl.config,
-                                captionText: config.captionText || tmpl.config.captionText,
-                                subCaptionText: config.subCaptionText || tmpl.config.subCaptionText,
-                                photoCount: config.photoCount ?? tmpl.config.photoCount
-                              })
-                            }
+                            template={tmpl}
+                            selected={config.style === tmpl.id}
+                            onSelect={() => selectTemplate(tmpl)}
                           />
                         ))}
                       </div>
@@ -401,20 +385,13 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </div>
             ) : (
               /* Render single selected category */
-              <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(84px,1fr))]">
+              <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-2 md:overflow-visible xl:grid-cols-3">
                 {TEMPLATE_DEFINITIONS.filter((t) => t.category === selectedCategory).map((tmpl) => (
-                  <TemplateCard
+                  <TemplatePreviewCard
                     key={tmpl.id}
-                    tmpl={tmpl}
-                    isActive={config.style === tmpl.id}
-                    onSelect={() =>
-                      onChangeConfig({
-                        ...tmpl.config,
-                        captionText: config.captionText || tmpl.config.captionText,
-                        subCaptionText: config.subCaptionText || tmpl.config.subCaptionText,
-                        photoCount: config.photoCount ?? tmpl.config.photoCount
-                      })
-                    }
+                    template={tmpl}
+                    selected={config.style === tmpl.id}
+                    onSelect={() => selectTemplate(tmpl)}
                   />
                 ))}
               </div>
