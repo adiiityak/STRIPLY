@@ -765,7 +765,7 @@ Run `npm run previews:generate` a second time, then `git status --short public/t
 
 Expected: no preview asset changes. A clean second generation proves the assets are deterministic.
 
-- [ ] **Step 5: Commit documentation and plan completion**
+- [x] **Step 5: Commit documentation and plan completion**
 
 ```bash
 git add README.md docs/superpowers/plans/2026-08-07-layouts-and-template-previews.md
