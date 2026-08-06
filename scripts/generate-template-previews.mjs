@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
@@ -59,9 +59,27 @@ async function main() {
       await canvas.screenshot({ path: path.join(outputDirectory, `${templateId}.png`) });
     }
 
-    const generatedAssets = templateIds.map((templateId) => path.join(outputDirectory, `${templateId}.png`));
-    const nonEmptyAssets = generatedAssets.filter((assetPath) => existsSync(assetPath) && statSync(assetPath).size > 0);
-    if (nonEmptyAssets.length !== templateIds.length) {
+    const expectedAssetNames = templateIds.map((templateId) => `${templateId}.png`);
+    const previewAssetNames = readdirSync(outputDirectory).filter((fileName) => fileName.endsWith('.png'));
+    const unexpectedAssetNames = previewAssetNames.filter(
+      (fileName) => !expectedAssetNames.includes(fileName)
+    );
+    if (unexpectedAssetNames.length > 0) {
+      throw new Error(`Unexpected template preview assets: ${unexpectedAssetNames.join(', ')}`);
+    }
+
+    const nonEmptyAssets = previewAssetNames.filter(
+      (fileName) => statSync(path.join(outputDirectory, fileName)).size > 0
+    );
+    const missingOrEmptyAssets = expectedAssetNames.filter((fileName) => {
+      const assetPath = path.join(outputDirectory, fileName);
+      return !existsSync(assetPath) || statSync(assetPath).size === 0;
+    });
+    if (
+      previewAssetNames.length !== templateIds.length ||
+      nonEmptyAssets.length !== templateIds.length ||
+      missingOrEmptyAssets.length > 0
+    ) {
       throw new Error(
         `Expected ${templateIds.length} non-empty preview PNGs but found ${nonEmptyAssets.length}`
       );

@@ -35,7 +35,13 @@ function TemplatePreviews() {
           aria-label={`${template.name} template preview`}
           style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}
         >
-          <StripCanvas photos={PREVIEW_PHOTOS} config={template.config} zoomLevel={1} />
+          <StripCanvas
+            photos={PREVIEW_PHOTOS}
+            config={template.config}
+            onUpdateSticker={() => undefined}
+            onDeleteSticker={() => undefined}
+            zoomLevel={1}
+          />
         </section>
       ))}
     </div>
