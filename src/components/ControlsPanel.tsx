@@ -47,9 +47,11 @@ import {
 } from 'lucide-react';
 import { BoardingPassInfo, TicketInfo, MusicTrackInfo, LockscreenInfo, AirMailInfo } from '../types';
 import { computeSlotLayout, FLUSH_THRESHOLD } from '../utils/stripLayout';
+import { applyPhotoLayout, GUIDED_LAYOUTS } from '../utils/photoLayout';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { ToolRail, type ToolId } from './ToolRail';
 import { ResizeHandle } from './ResizeHandle';
+import { LayoutPicker } from './LayoutPicker';
 
 const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
   all: <Sparkles className="w-3.5 h-3.5 text-amber-500 inline" />,
@@ -154,6 +156,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
   const [suggestedCaptions, setSuggestedCaptions] = useState<string[]>([]);
   const [stickerCategory, setStickerCategory] = useState<string>('hearts');
   const [selectedCategory, setSelectedCategory] = useState<'all' | TemplateCategory>('all');
+  const activeTemplate = TEMPLATE_DEFINITIONS.find((template) => template.id === config.style);
+  const supportedLayouts = activeTemplate?.supportedLayouts ?? GUIDED_LAYOUTS;
 
   // Handle Tab Change
   const updateConfig = (updates: Partial<StripConfiguration>) => {
@@ -332,6 +336,12 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </label>
               <p className="text-[#666666] text-[11px]">Choose a style baseline to instantly layout your photobooth strip.</p>
             </div>
+
+            <LayoutPicker
+              value={config.photoLayout}
+              supportedLayouts={supportedLayouts}
+              onChange={(nextLayout) => onChangeConfig(applyPhotoLayout(config, nextLayout))}
+            />
 
             {/* Category Filter Pills */}
             <div className="flex flex-wrap items-center gap-1.5 pb-1">
@@ -667,8 +677,9 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 {[2, 3, 4, 5, 6].map((n) => (
                   <button
                     key={n}
+                    disabled={config.photoLayout === 'grid-2x2'}
                     onClick={() => updateConfig({ photoCount: n })}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all disabled:cursor-not-allowed disabled:opacity-45 ${
                       config.photoCount === n
                         ? 'bg-[#FF6B6B] text-white border-[#FF6B6B] shadow-xs'
                         : 'bg-white text-[#666666] border-[#E8E6DF] hover:bg-[#FAF9F6] hover:text-[#2D2D2D]'
@@ -688,6 +699,11 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                   </span>
                 )}
               </p>
+              {config.photoLayout === 'grid-2x2' && (
+                <p className="text-[11px] text-[#666666]">
+                  2×2 uses exactly four photos. Switch to 1×4 for 2–6 photos.
+                </p>
+              )}
             </div>
 
             {/* Spacing & Radius Sliders */}
