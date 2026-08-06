@@ -4,6 +4,7 @@ import type { TemplateDefinition } from '../data/templates';
 const CATEGORY_SYMBOLS: Record<TemplateDefinition['category'], string> = {
   travel: '✈️',
   booth: '📸',
+  patterns: '▦',
   romance: '💌',
   music: '🎵',
   vintage: '🎞️'
@@ -26,13 +27,13 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
       title={template.tagline}
       aria-label={template.name}
       aria-pressed={selected}
-      className={`group w-20 min-w-20 snap-center shrink-0 overflow-hidden rounded-lg border bg-white text-left transition-all ${
+      className={`group w-28 min-w-28 snap-center shrink-0 overflow-hidden rounded-xl border bg-white text-left transition-all ${
         selected
           ? 'border-2 border-[#FF6B6B] bg-[#FFF5F5] shadow-xs'
           : 'border-[#E8E6DF] hover:border-[#CFCBC1] hover:bg-[#FAF9F6]'
       }`}
     >
-      <div className="h-28 overflow-hidden bg-[#FAF9F6] p-1.5">
+      <div className="h-44 overflow-hidden bg-[#FAF9F6] px-5 py-3">
         {imageFailed ? (
           <div
             data-testid={`template-fallback-${template.id}`}
@@ -58,7 +59,7 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
         )}
       </div>
       <span
-        className={`block truncate px-1 py-1.5 text-center text-[9px] font-black leading-tight ${
+        className={`block truncate px-2 py-2 text-center text-[10px] font-black leading-tight ${
           selected ? 'text-[#FF6B6B]' : 'text-[#2D2D2D]'
         }`}
       >

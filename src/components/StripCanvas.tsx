@@ -384,6 +384,10 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   : config.background.type === 'pattern'
                   ? getPatternBackground(config.background.patternName, config.background.color)
                   : undefined,
+              backgroundSize:
+                config.background.type === 'pattern'
+                  ? getPatternBackgroundSize(config.background.patternName)
+                  : undefined,
               width: getCanvasWidth(config.exportFormat),
               padding: `${config.outerPadding}px`,
               fontFamily: getFontFamily(config.fontType)
@@ -1262,9 +1266,42 @@ function getPatternBackground(patternName?: string, bgColor: string = '#121212')
     case 'dots':
       return 'radial-gradient(#f472b6 1.5px, transparent 1.5px)';
     case 'hearts':
-      return 'radial-gradient(#fda4af 1.5px, transparent 1.5px)';
+      return 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22%3E%3Cpath d=%22M24 34S11 27 11 18c0-6 8-8 13-2 5-6 13-4 13 2 0 9-13 16-13 16Z%22 fill=%22%23f9a8b8%22 fill-opacity=%22.68%22/%3E%3C/svg%3E")';
+    case 'checker':
+      return 'linear-gradient(45deg, rgba(147,197,253,.42) 25%, transparent 25%), linear-gradient(-45deg, rgba(147,197,253,.42) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(147,197,253,.42) 75%), linear-gradient(-45deg, transparent 75%, rgba(147,197,253,.42) 75%)';
+    case 'gingham':
+      return 'linear-gradient(90deg, rgba(88,129,87,.25) 50%, transparent 50%), linear-gradient(rgba(88,129,87,.25) 50%, transparent 50%)';
+    case 'lemons':
+      return 'url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22 viewBox=%220 0 80 80%22%3E%3Cellipse cx=%2224%22 cy=%2232%22 rx=%2215%22 ry=%2210%22 transform=%22rotate(-32 24 32)%22 fill=%22%23fde047%22 fill-opacity=%22.72%22/%3E%3Cpath d=%22M35 18c9-9 17-5 17-5-6 9-17 5-17 5Z%22 fill=%22%2386a96b%22 fill-opacity=%22.7%22/%3E%3Cellipse cx=%2265%22 cy=%2270%22 rx=%2212%22 ry=%228%22 transform=%22rotate(25 65 70)%22 fill=%22%23facc15%22 fill-opacity=%22.58%22/%3E%3C/svg%3E")';
+    case 'meadow':
+      return 'radial-gradient(circle at 18px 18px, #f9a8d4 0 3px, #fff 3px 6px, transparent 6px), radial-gradient(circle at 42px 40px, #fef08a 0 3px, #fff 3px 6px, transparent 6px), linear-gradient(145deg, rgba(134,239,172,.5), rgba(220,252,231,.18))';
+    case 'denim':
+      return 'repeating-linear-gradient(45deg, rgba(255,255,255,.08) 0 1px, transparent 1px 4px), repeating-linear-gradient(-45deg, rgba(15,23,42,.15) 0 1px, transparent 1px 5px)';
     case 'grid':
     default:
       return 'linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)';
+  }
+}
+
+function getPatternBackgroundSize(patternName?: string): string | undefined {
+  switch (patternName) {
+    case 'polka':
+      return '18px 18px';
+    case 'dots':
+      return '14px 14px';
+    case 'hearts':
+      return '48px 48px';
+    case 'checker':
+      return '40px 40px';
+    case 'gingham':
+      return '32px 32px';
+    case 'lemons':
+      return '80px 80px';
+    case 'meadow':
+      return '60px 60px';
+    case 'grid':
+      return '20px 20px';
+    default:
+      return undefined;
   }
 }

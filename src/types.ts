@@ -26,7 +26,13 @@ export type StripStyle =
   | 'weddingribbon'
   | 'airmail'
   | 'boothycall'
-  | 'memoriesarchive';
+  | 'memoriesarchive'
+  | 'pattern-hearts'
+  | 'pattern-checker'
+  | 'pattern-gingham'
+  | 'pattern-lemons'
+  | 'pattern-meadow'
+  | 'pattern-denim';
 
 export type FrameType = 'rounded' | 'square' | 'film' | 'torn' | 'vintage' | 'shadow' | 'borderless' | 'scalloped' | 'ticket' | 'parchment' | 'circle' | 'bowRibbon';
 
@@ -71,7 +77,20 @@ export interface BackgroundSetting {
   type: 'solid' | 'gradient' | 'pattern';
   color: string;
   gradientTo?: string;
-  patternName?: 'dots' | 'grid' | 'hearts' | 'stripes' | 'noise' | 'polka' | 'bowling' | 'scalloped';
+  patternName?:
+    | 'dots'
+    | 'grid'
+    | 'hearts'
+    | 'stripes'
+    | 'noise'
+    | 'polka'
+    | 'bowling'
+    | 'scalloped'
+    | 'checker'
+    | 'gingham'
+    | 'lemons'
+    | 'meadow'
+    | 'denim';
 }
 
 export interface MemoryCardDetails {

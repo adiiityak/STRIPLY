@@ -1,6 +1,6 @@
 import { PhotoLayout, StripConfiguration, StripStyle } from '../types';
 
-export type TemplateCategory = 'travel' | 'booth' | 'romance' | 'music' | 'vintage';
+export type TemplateCategory = 'travel' | 'booth' | 'patterns' | 'romance' | 'music' | 'vintage';
 
 export interface CategoryInfo {
   id: 'all' | TemplateCategory;
@@ -13,6 +13,7 @@ export const TEMPLATE_CATEGORIES: CategoryInfo[] = [
   { id: 'all', name: 'All Templates', icon: '🌟', description: 'Browse all photobooth strip designs' },
   { id: 'travel', name: 'Tickets & Travel', icon: '✈️', description: 'Boarding passes, air mail envelopes & ticket stubs' },
   { id: 'booth', name: 'Photobooth & Studio', icon: '📸', description: 'Classic 2x6, Korean Life 4 Cuts, Selene & polka dots' },
+  { id: 'patterns', name: 'Patterns', icon: '▦', description: 'Text-free prints, checks, florals & textures' },
   { id: 'romance', name: 'Romance & Events', icon: '💌', description: 'Wedding bows, love letters, scrapbook & anniversary' },
   { id: 'music', name: 'Music & Tech', icon: '🎵', description: 'Spotify tracks, iOS lockscreen, Y2K & iMessage chat' },
   { id: 'vintage', name: 'Vintage & Film', icon: '🎞️', description: 'Memories archive, 35mm film, Polaroid & newspaper' }
@@ -28,6 +29,77 @@ export interface TemplateDefinition {
   supportedLayouts: readonly PhotoLayout[];
   config: StripConfiguration;
 }
+
+type PatternName = NonNullable<StripConfiguration['background']['patternName']>;
+
+function createPatternTemplate(
+  id: StripStyle,
+  name: string,
+  patternName: PatternName,
+  color: string,
+  previewColor: string
+): TemplateDefinition {
+  return {
+    id,
+    name,
+    category: 'patterns',
+    tagline: `${name} pattern with clean photo frames and no printed text`,
+    previewColor,
+    badgeText: 'Pattern',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
+    config: {
+      style: id,
+      frameType: 'square',
+      fontType: 'sans',
+      background: { type: 'pattern', color, patternName },
+      filter: {
+        preset: 'normal',
+        grain: 0,
+        fade: 0,
+        warmth: 0,
+        contrast: 100,
+        brightness: 100,
+        dustOverlay: false,
+        lightLeak: false,
+        vignette: false
+      },
+      captionText: '',
+      subCaptionText: '',
+      showDateStamp: false,
+      customDateText: '',
+      framePadding: 8,
+      outerPadding: 14,
+      photoBorderRadius: 2,
+      photoGap: 8,
+      photoCount: 4,
+      memoryCard: {
+        enabled: false,
+        location: '',
+        date: '',
+        song: '',
+        weather: '',
+        shortNote: '',
+        qrEnabled: false,
+        qrUrl: ''
+      },
+      showTimelineLabels: false,
+      stickerList: [],
+      exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
+      captionAnimation: 'none',
+      stickerAnimation: 'none'
+    }
+  };
+}
+
+const PATTERN_TEMPLATES: TemplateDefinition[] = [
+  createPatternTemplate('pattern-hearts', 'Soft Hearts', 'hearts', '#fff4f6', '#fda4af'),
+  createPatternTemplate('pattern-checker', 'Blue Checker', 'checker', '#eff6ff', '#bfdbfe'),
+  createPatternTemplate('pattern-gingham', 'Sage Gingham', 'gingham', '#f7fee7', '#a3b18a'),
+  createPatternTemplate('pattern-lemons', 'Lemon Stripe', 'lemons', '#fefce8', '#fde68a'),
+  createPatternTemplate('pattern-meadow', 'Garden Meadow', 'meadow', '#ecfdf5', '#86efac'),
+  createPatternTemplate('pattern-denim', 'Denim Texture', 'denim', '#315b7d', '#315b7d')
+];
 
 export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   // --- TICKETS & TRAVEL CATEGORY ---
@@ -1365,5 +1437,6 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         qrUrl: ''
       }
     }
-  }
+  },
+  ...PATTERN_TEMPLATES
 ];

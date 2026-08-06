@@ -16,9 +16,9 @@ describe('TemplatePreviewCard', () => {
     expect(preview).not.toHaveClass('group-hover:scale-[1.02]');
     expect(preview).toHaveAttribute('loading', 'lazy');
     expect(preview).toHaveAttribute('decoding', 'async');
-    expect(preview.parentElement).toHaveClass('h-28');
+    expect(preview.parentElement).toHaveClass('h-44', 'px-5');
     const button = screen.getByRole('button', { name: template.name });
-    expect(button).toHaveClass('w-20', 'min-w-20');
+    expect(button).toHaveClass('w-28', 'min-w-28');
     expect(button).toHaveAttribute('aria-pressed', 'true');
   });
 

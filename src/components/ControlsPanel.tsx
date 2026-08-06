@@ -58,6 +58,7 @@ const CATEGORY_ICON_MAP: Record<string, React.ReactNode> = {
   all: <Sparkles className="w-3.5 h-3.5 text-amber-500 inline" />,
   travel: <Plane className="w-3.5 h-3.5 text-red-500 inline" />,
   booth: <Camera className="w-3.5 h-3.5 text-sky-500 inline" />,
+  patterns: <Square className="w-3.5 h-3.5 text-emerald-600 inline" />,
   romance: <Heart className="w-3.5 h-3.5 text-pink-500 inline" />,
   music: <Music className="w-3.5 h-3.5 text-purple-500 inline" />,
   vintage: <Film className="w-3.5 h-3.5 text-amber-700 inline" />
