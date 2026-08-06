@@ -8,6 +8,17 @@ const host = '127.0.0.1';
 const port = 4175;
 const baseUrl = `http://${host}:${port}`;
 const outputDirectory = path.resolve('public/template-previews');
+// StripCanvas includes production-only typewriter captions and decorative CSS motion. The
+// preview assets are committed, so capture them only once every canvas has reached a stable
+// visual state rather than at an arbitrary animation frame.
+const previewSettleTimeMs = 4_000;
+const freezePreviewMotionCss = `
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    caret-color: transparent !important;
+  }
+`;
 
 function waitForVite(child) {
   return new Promise((resolve, reject) => {
@@ -44,6 +55,8 @@ async function main() {
     const page = await context.newPage();
     await page.goto(`${baseUrl}/template-previews.html`, { waitUntil: 'networkidle' });
     await page.waitForSelector('[data-template-preview-ready="true"]');
+    await page.addStyleTag({ content: freezePreviewMotionCss });
+    await page.waitForTimeout(previewSettleTimeMs);
 
     const templateIds = await page.locator('[data-template-preview]').evaluateAll((elements) =>
       elements.map((element) => element.getAttribute('data-template-preview')).filter(Boolean)

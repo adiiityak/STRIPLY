@@ -63,7 +63,7 @@
 - Produces: `applyPhotoLayout(config, layout): StripConfiguration`.
 - Produces: `TemplateDefinition.supportedLayouts: readonly PhotoLayout[]`.
 
-- [ ] **Step 1: Write the failing domain tests**
+- [x] **Step 1: Write the failing domain tests**
 
 Create `src/utils/photoLayout.test.ts`:
 
@@ -104,13 +104,13 @@ describe('photo layout domain', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run: `npm test -- src/utils/photoLayout.test.ts`
 
 Expected: FAIL because `./photoLayout` and the new configuration fields do not exist.
 
-- [ ] **Step 3: Add the types and pure transitions**
+- [x] **Step 3: Add the types and pure transitions**
 
 In `src/types.ts` add:
 
@@ -160,7 +160,7 @@ export function applyPhotoLayout(
 }
 ```
 
-- [ ] **Step 4: Run domain and full tests**
+- [x] **Step 4: Run domain and full tests**
 
 Run: `npm test -- src/utils/photoLayout.test.ts`
 
@@ -170,7 +170,7 @@ Run: `npm test`
 
 Expected: all existing and new tests PASS.
 
-- [ ] **Step 5: Commit the domain model**
+- [x] **Step 5: Commit the domain model**
 
 ```bash
 git add src/types.ts src/data/templates.ts src/utils/photoLayout.ts src/utils/photoLayout.test.ts
@@ -191,7 +191,7 @@ git commit -m "feat: add photo layout domain model"
 - Produces: `computePhotoAreaLayout(layout, metrics): PhotoAreaLayout`.
 - `PhotoAreaLayout` contains `columns`, `rows`, `gap`, and `height`.
 
-- [ ] **Step 1: Write failing geometry tests**
+- [x] **Step 1: Write failing geometry tests**
 
 Append to `src/utils/stripLayout.test.ts`:
 
@@ -220,13 +220,13 @@ describe('computePhotoAreaLayout', () => {
 });
 ```
 
-- [ ] **Step 2: Run the geometry test and verify RED**
+- [x] **Step 2: Run the geometry test and verify RED**
 
 Run: `npm test -- src/utils/stripLayout.test.ts`
 
 Expected: FAIL because `computePhotoAreaLayout` is not exported.
 
-- [ ] **Step 3: Implement the pure geometry calculation**
+- [x] **Step 3: Implement the pure geometry calculation**
 
 Add to `src/utils/stripLayout.ts`:
 
@@ -265,7 +265,7 @@ export function computePhotoAreaLayout(
 }
 ```
 
-- [ ] **Step 4: Update `StripCanvas` to consume geometry**
+- [x] **Step 4: Update `StripCanvas` to consume geometry**
 
 In `src/components/StripCanvas.tsx`:
 
@@ -300,7 +300,7 @@ const photoAreaStyle: React.CSSProperties = photoLayout === 'grid-2x2'
 
 For grid slots, apply `{ minWidth: 0, minHeight: 0, height: '100%' }`; keep the existing `slotFlexStyle` only for vertical slots. Render placeholders through the same slot-style branch.
 
-- [ ] **Step 5: Run tests and type-check**
+- [x] **Step 5: Run tests and type-check**
 
 Run: `npm test -- src/utils/stripLayout.test.ts`
 
@@ -310,7 +310,7 @@ Run: `npm run lint`
 
 Expected: TypeScript exits 0.
 
-- [ ] **Step 6: Commit geometry and rendering**
+- [x] **Step 6: Commit geometry and rendering**
 
 ```bash
 git add src/utils/stripLayout.ts src/utils/stripLayout.test.ts src/components/StripCanvas.tsx
@@ -334,7 +334,7 @@ git commit -m "feat: render vertical and grid photo layouts"
 - Consumes: `PhotoLayout`, `GUIDED_LAYOUTS`, `isLayoutSupported`, and `applyPhotoLayout`.
 - Produces: `LayoutPicker({ value, supportedLayouts, onChange })`.
 
-- [ ] **Step 1: Install DOM test dependencies**
+- [x] **Step 1: Install DOM test dependencies**
 
 Run:
 
@@ -357,7 +357,7 @@ test: {
 }
 ```
 
-- [ ] **Step 2: Write the failing component tests**
+- [x] **Step 2: Write the failing component tests**
 
 Create `src/components/LayoutPicker.test.tsx`:
 
@@ -394,13 +394,13 @@ describe('LayoutPicker', () => {
 });
 ```
 
-- [ ] **Step 3: Run the component test and verify RED**
+- [x] **Step 3: Run the component test and verify RED**
 
 Run: `npm test -- src/components/LayoutPicker.test.tsx`
 
 Expected: FAIL because `LayoutPicker` does not exist.
 
-- [ ] **Step 4: Implement `LayoutPicker`**
+- [x] **Step 4: Implement `LayoutPicker`**
 
 Create two large tap targets with schematic slot graphics. Use `aria-pressed`, `disabled`, and the exact accessible names `1 by 4 vertical strip` and `2 by 2 grid`. The visual slot markup is:
 
@@ -416,7 +416,7 @@ const cells = layout === 'vertical-1x4'
 </span>
 ```
 
-- [ ] **Step 5: Integrate it into `ControlsPanel`**
+- [x] **Step 5: Integrate it into `ControlsPanel`**
 
 Place the selector before category filters. Find the active template definition and pass its `supportedLayouts`. On selection call:
 
@@ -426,7 +426,7 @@ onChangeConfig(applyPhotoLayout(config, nextLayout));
 
 When `config.photoLayout === 'grid-2x2'`, disable the existing photo-count slider and display `2×2 uses exactly four photos. Switch to 1×4 for 2–6 photos.`
 
-- [ ] **Step 6: Run tests and commit**
+- [x] **Step 6: Run tests and commit**
 
 Run: `npm test -- src/components/LayoutPicker.test.tsx`
 
@@ -459,7 +459,7 @@ git commit -m "feat: add photo layout selector"
 - Produces: one `public/template-previews/<template-id>.png` per template.
 - Produces: `npm run previews:generate`.
 
-- [ ] **Step 1: Install Playwright and Chromium**
+- [x] **Step 1: Install Playwright and Chromium**
 
 Run:
 
@@ -477,7 +477,7 @@ Add scripts:
 }
 ```
 
-- [ ] **Step 2: Create deterministic local photo fixtures**
+- [x] **Step 2: Create deterministic local photo fixtures**
 
 Create `src/data/previewPhotos.ts` with four SVG data URLs. Each SVG must use a different gradient and centered portrait silhouette so preview generation never depends on Unsplash or CORS:
 
@@ -507,11 +507,11 @@ export const PREVIEW_PHOTOS: PhotoItem[] = [
 }));
 ```
 
-- [ ] **Step 3: Build the isolated generation page**
+- [x] **Step 3: Build the isolated generation page**
 
 `template-previews.html` loads `/src/template-previews-main.tsx`. The React entry renders every template in a wrapper with `data-template-preview="<id>"`, using `StripCanvas`, `PREVIEW_PHOTOS`, no-op sticker callbacks, and `zoomLevel={1}`. Keep wrappers separated so identical canvas IDs do not affect screenshot selection.
 
-- [ ] **Step 4: Write the generator**
+- [x] **Step 4: Write the generator**
 
 Create `scripts/generate-template-previews.mjs` that:
 
@@ -533,13 +533,13 @@ await Promise.all(
 document.body.dataset.templatePreviewReady = 'true';
 ```
 
-- [ ] **Step 5: Generate and verify all assets**
+- [x] **Step 5: Generate and verify all assets**
 
 Run: `npm run previews:generate`
 
 Expected: exit 0 and a final generator message in the exact form `Generated <N>/<N> template previews`, where both values come from the page-derived template ID list. The generator itself must throw when the number of non-empty PNG files differs from that ID count.
 
-- [ ] **Step 6: Commit generator and assets**
+- [x] **Step 6: Commit generator and assets**
 
 ```bash
 git add package.json package-lock.json template-previews.html scripts/generate-template-previews.mjs src/data/previewPhotos.ts src/template-previews-main.tsx public/template-previews
@@ -559,7 +559,7 @@ git commit -m "feat: generate real template preview assets"
 - Consumes: `TemplateDefinition` and `/template-previews/<id>.png`.
 - Produces: `TemplatePreviewCard({ template, selected, onSelect })`.
 
-- [ ] **Step 1: Write failing card tests**
+- [x] **Step 1: Write failing card tests**
 
 Create `src/components/TemplatePreviewCard.test.tsx`:
 
@@ -589,17 +589,17 @@ describe('TemplatePreviewCard', () => {
 });
 ```
 
-- [ ] **Step 2: Run the card test and verify RED**
+- [x] **Step 2: Run the card test and verify RED**
 
 Run: `npm test -- src/components/TemplatePreviewCard.test.tsx`
 
 Expected: FAIL because `TemplatePreviewCard` does not exist.
 
-- [ ] **Step 3: Implement the preview card**
+- [x] **Step 3: Implement the preview card**
 
 Use local `imageFailed` state. The button contains a portrait preview area, then the template name below it. Keep `title` for the tagline and `aria-pressed` for selection. The selected border is `#FF6B6B`; fallback uses `template.previewColor` plus the category icon treatment.
 
-- [ ] **Step 4: Integrate responsive browsing**
+- [x] **Step 4: Integrate responsive browsing**
 
 Remove the local `TemplateCard` from `ControlsPanel.tsx`. Render `TemplatePreviewCard` in:
 
@@ -608,7 +608,7 @@ Remove the local `TemplateCard` from `ControlsPanel.tsx`. Render `TemplatePrevie
 
 Preserve category filtering and the existing rule that keeps user caption text and photo count when switching templates. Also preserve the current `photoLayout` when the next template supports it; otherwise switch to the template's first supported layout via `applyPhotoLayout`.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run: `npm test -- src/components/TemplatePreviewCard.test.tsx`
 
@@ -638,7 +638,7 @@ git commit -m "feat: show visual template preview cards"
 - Consumes: user-visible layout buttons, template cards, `#striply-canvas`, and share preview.
 - Produces: `npm run test:e2e` regression suite.
 
-- [ ] **Step 1: Add stable test attributes**
+- [x] **Step 1: Add stable test attributes**
 
 Add:
 
@@ -647,7 +647,7 @@ Add:
 - `data-photo-layout={photoLayout}` to `#striply-canvas`.
 - `data-photo-slot` to every rendered photo slot and placeholder slot.
 
-- [ ] **Step 2: Configure Playwright**
+- [x] **Step 2: Configure Playwright**
 
 Create `playwright.config.ts`:
 
@@ -669,7 +669,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Write the browser tests**
+- [x] **Step 3: Write the browser tests**
 
 Create `tests/layouts-and-previews.spec.ts`:
 
@@ -701,13 +701,13 @@ test('shows real preview images and produces a non-empty share raster', async ({
 });
 ```
 
-- [ ] **Step 4: Run desktop and mobile browser tests**
+- [x] **Step 4: Run desktop and mobile browser tests**
 
 Run: `npm run test:e2e`
 
 Expected: both tests PASS in both projects, 4 passed total.
 
-- [ ] **Step 5: Commit browser coverage**
+- [x] **Step 5: Commit browser coverage**
 
 ```bash
 git add playwright.config.ts tests/layouts-and-previews.spec.ts package.json src/components/LayoutPicker.tsx src/components/TemplatePreviewCard.tsx src/components/StripCanvas.tsx
@@ -726,7 +726,7 @@ git commit -m "test: cover layouts and template previews"
 - Consumes: all deliverables from Tasks 1–6.
 - Produces: documented preview regeneration and verified release state.
 
-- [ ] **Step 1: Document the user-facing features**
+- [x] **Step 1: Document the user-facing features**
 
 Add a concise README section covering:
 
@@ -735,11 +735,11 @@ Add a concise README section covering:
 - How to regenerate previews with `npm run previews:generate`.
 - The requirement to review regenerated PNG changes before committing.
 
-- [ ] **Step 2: Mark completed plan checkboxes**
+- [x] **Step 2: Mark completed plan checkboxes**
 
 As each task finishes, change its steps from `- [ ]` to `- [x]`. Do not mark a step complete before its command has exited successfully.
 
-- [ ] **Step 3: Run the complete verification suite**
+- [x] **Step 3: Run the complete verification suite**
 
 Run:
 
@@ -759,7 +759,7 @@ Expected:
 - Playwright reports 4 passed tests.
 - `git diff --check` prints no errors.
 
-- [ ] **Step 4: Verify generated asset completeness**
+- [x] **Step 4: Verify generated asset completeness**
 
 Run `npm run previews:generate` a second time, then `git status --short public/template-previews`.
 
