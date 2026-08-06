@@ -7,8 +7,8 @@ describe('pattern templates', () => {
     const uploadedPatterns = patterns.filter((template) => template.config.background.type === 'image');
 
     expect(TEMPLATE_CATEGORIES.some((category) => category.id === 'patterns')).toBe(true);
-    expect(patterns).toHaveLength(25);
-    expect(uploadedPatterns).toHaveLength(19);
+    expect(patterns).toHaveLength(38);
+    expect(uploadedPatterns).toHaveLength(32);
     patterns.forEach((template) => {
       expect(['pattern', 'image']).toContain(template.config.background.type);
       expect(template.config.captionText).toBe('');

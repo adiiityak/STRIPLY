@@ -146,7 +146,55 @@ const UPLOADED_PATTERN_TEMPLATES: TemplateDefinition[] = [
   createImagePatternTemplate('pattern-red-heart-tunnel', 'Red Heart Tunnel', 'red-heart-tunnel.png', '#9f001d'),
   createImagePatternTemplate('pattern-doodle-hearts', 'Doodle Hearts', 'doodle-hearts.png', '#80040c'),
   createImagePatternTemplate('pattern-love-type', 'Love Type', 'love-type.png', '#b50008'),
-  createImagePatternTemplate('pattern-love-words', 'Love Words', 'love-words.png', '#fffdf6')
+  createImagePatternTemplate('pattern-love-words', 'Love Words', 'love-words.png', '#fffdf6'),
+  createImagePatternTemplate('pattern-kiss-scatter', 'Kiss Scatter', 'kiss-scatter.png', '#b51f2e'),
+  createImagePatternTemplate('pattern-love-newspaper', 'Love Newspaper', 'love-newspaper.png', '#f5f5f2'),
+  createImagePatternTemplate('pattern-burgundy-waves', 'Burgundy Waves', 'burgundy-waves.png', '#4a0719'),
+  createImagePatternTemplate('pattern-blue-waves', 'Blue Waves', 'blue-waves.png', '#1f3978'),
+  createImagePatternTemplate('pattern-purple-waves', 'Purple Waves', 'purple-waves.png', '#3d1265'),
+  createImagePatternTemplate(
+    'pattern-wavy-heart-checker',
+    'Wavy Heart Checker',
+    'wavy-heart-checker.png',
+    '#ed78b4'
+  ),
+  createImagePatternTemplate('pattern-teal-contours', 'Teal Contours', 'teal-contours.png', '#0e6974'),
+  createImagePatternTemplate(
+    'pattern-lime-wavy-checker',
+    'Lime Wavy Checker',
+    'lime-wavy-checker.png',
+    '#bec34b'
+  ),
+  createImagePatternTemplate(
+    'pattern-mono-wavy-checker',
+    'Mono Wavy Checker',
+    'mono-wavy-checker.png',
+    '#111111'
+  ),
+  createImagePatternTemplate(
+    'pattern-mono-heart-tunnel',
+    'Mono Heart Tunnel',
+    'mono-heart-tunnel.png',
+    '#777777'
+  ),
+  createImagePatternTemplate(
+    'pattern-blue-heart-tunnel',
+    'Blue Heart Tunnel',
+    'blue-heart-tunnel.png',
+    '#31598a'
+  ),
+  createImagePatternTemplate(
+    'pattern-green-heart-tunnel',
+    'Green Heart Tunnel',
+    'green-heart-tunnel.png',
+    '#4f844f'
+  ),
+  createImagePatternTemplate(
+    'pattern-purple-heart-tunnel',
+    'Purple Heart Tunnel',
+    'purple-heart-tunnel.png',
+    '#7d3c8a'
+  )
 ];
 
 export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [

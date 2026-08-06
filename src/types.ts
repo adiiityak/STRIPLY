@@ -51,7 +51,20 @@ export type StripStyle =
   | 'pattern-red-heart-tunnel'
   | 'pattern-doodle-hearts'
   | 'pattern-love-type'
-  | 'pattern-love-words';
+  | 'pattern-love-words'
+  | 'pattern-kiss-scatter'
+  | 'pattern-love-newspaper'
+  | 'pattern-burgundy-waves'
+  | 'pattern-blue-waves'
+  | 'pattern-purple-waves'
+  | 'pattern-wavy-heart-checker'
+  | 'pattern-teal-contours'
+  | 'pattern-lime-wavy-checker'
+  | 'pattern-mono-wavy-checker'
+  | 'pattern-mono-heart-tunnel'
+  | 'pattern-blue-heart-tunnel'
+  | 'pattern-green-heart-tunnel'
+  | 'pattern-purple-heart-tunnel';
 
 export type FrameType = 'rounded' | 'square' | 'film' | 'torn' | 'vintage' | 'shadow' | 'borderless' | 'scalloped' | 'ticket' | 'parchment' | 'circle' | 'bowRibbon';
 
