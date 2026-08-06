@@ -37,6 +37,7 @@ export function LayoutPicker({ value, supportedLayouts, onChange }: LayoutPicker
             <button
               key={layout}
               type="button"
+              data-testid={`layout-${layout}`}
               aria-label={LAYOUT_DETAILS[layout].name}
               aria-pressed={value === layout}
               disabled={!supported}

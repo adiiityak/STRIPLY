@@ -21,6 +21,7 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
   return (
     <button
       type="button"
+      data-testid={`template-card-${template.id}`}
       onClick={onSelect}
       title={template.tagline}
       aria-label={template.name}

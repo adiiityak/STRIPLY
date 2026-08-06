@@ -372,21 +372,22 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
           {/* Main Canvas Container for Export */}
           <div
             ref={setCanvasRef}
-          id="striply-canvas"
-          className="relative shadow-2xl transition-all overflow-hidden flex flex-col items-center"
-          style={{
-            backgroundColor: config.background.color,
-            backgroundImage:
-              config.background.type === 'gradient' && config.background.gradientTo
-                ? `linear-gradient(to bottom, ${config.background.color}, ${config.background.gradientTo})`
-                : config.background.type === 'pattern'
-                ? getPatternBackground(config.background.patternName, config.background.color)
-                : undefined,
-            width: getCanvasWidth(config.exportFormat),
-            padding: `${config.outerPadding}px`,
-            fontFamily: getFontFamily(config.fontType)
-          }}
-        >
+            id="striply-canvas"
+            data-photo-layout={photoLayout}
+            className="relative shadow-2xl transition-all overflow-hidden flex flex-col items-center"
+            style={{
+              backgroundColor: config.background.color,
+              backgroundImage:
+                config.background.type === 'gradient' && config.background.gradientTo
+                  ? `linear-gradient(to bottom, ${config.background.color}, ${config.background.gradientTo})`
+                  : config.background.type === 'pattern'
+                  ? getPatternBackground(config.background.patternName, config.background.color)
+                  : undefined,
+              width: getCanvasWidth(config.exportFormat),
+              padding: `${config.outerPadding}px`,
+              fontFamily: getFontFamily(config.fontType)
+            }}
+          >
           {/* Film & Selene Sprocket Holes */}
           {(config.style === 'film' || config.style === 'selene') && (
             <>
@@ -633,7 +634,10 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             }}
           >
             {photos.length === 0 ? (
-              <div className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400">
+              <div
+                data-photo-slot
+                className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400"
+              >
                 <Sparkles className="w-8 h-8 mb-2 opacity-50" />
                 <p className="text-sm font-medium">No photos added yet</p>
                 <p className="text-xs">Upload photos to render strip</p>
@@ -643,6 +647,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
               {visiblePhotos.map((photo, index) => (
                 <div
                   key={photo.id}
+                  data-photo-slot
                   onClick={() => onEditPhoto?.(photo)}
                   className={`group relative w-full cursor-pointer transition-transform hover:scale-[1.01] ${getFrameContainerClass()}`}
                   style={{
