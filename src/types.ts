@@ -87,6 +87,8 @@ export interface MemoryCardDetails {
 
 export type ExportFormat = 'strip2x6' | 'strip4x6' | 'igStory' | 'igPost' | 'wallpaper' | 'a4Print';
 
+export type PhotoLayout = 'vertical-1x4' | 'grid-2x2';
+
 export type StickerAnimation = 'float' | 'bounce' | 'sway' | 'none';
 
 export type CaptionAnimation = 'typewriter' | 'fadeSlide' | 'pulse' | 'none';
@@ -154,6 +156,7 @@ export interface StripConfiguration {
   showTimelineLabels: boolean;
   stickerList: PlacedSticker[];
   exportFormat: ExportFormat;
+  photoLayout: PhotoLayout;
   stickerAnimation?: StickerAnimation;
   captionAnimation?: CaptionAnimation;
 

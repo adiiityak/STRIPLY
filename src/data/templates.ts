@@ -1,4 +1,4 @@
-import { StripConfiguration, StripStyle } from '../types';
+import { PhotoLayout, StripConfiguration, StripStyle } from '../types';
 
 export type TemplateCategory = 'travel' | 'booth' | 'romance' | 'music' | 'vintage';
 
@@ -25,6 +25,7 @@ export interface TemplateDefinition {
   tagline: string;
   previewColor: string;
   badgeText: string;
+  supportedLayouts: readonly PhotoLayout[];
   config: StripConfiguration;
 }
 
@@ -32,6 +33,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   // --- TICKETS & TRAVEL CATEGORY ---
   {
     id: 'boardingpass',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Airline Boarding Pass',
     category: 'travel',
     tagline: 'Airline ticket strip with departure/arrival airport codes, flight info, seats & barcode headers',
@@ -64,6 +66,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       boardingPass: {
         airlineName: 'URARCHIVE AIRLINES',
@@ -91,6 +94,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'airmail',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Air Mail Postcard',
     category: 'travel',
     tagline: 'Vintage airmail border with diagonal red/blue stripes, postage stamps, postmarks & signature lines',
@@ -123,6 +127,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       airMail: {
         airMailBadge: 'PAR AVION / BY AIR MAIL',
@@ -147,6 +152,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'ticketstub',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Pixelbooth Ticket Stub',
     category: 'travel',
     tagline: 'Cinema / Concert ticket stub layout with barcodes & side notch cutouts',
@@ -179,6 +185,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       ticket: {
         eventTitle: 'Special Day',
@@ -202,6 +209,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   // --- PHOTOBOOTH & STUDIO CATEGORY ---
   {
     id: 'classic',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Classic Photobooth',
     category: 'booth',
     tagline: '2x6 strip, clean white border, timeless studio look',
@@ -234,6 +242,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -249,6 +258,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'korean',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Korean Photo Booth',
     category: 'booth',
     tagline: 'Soft pastel pinks, cute typography, date stamps & cute stickers',
@@ -284,6 +294,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'k-stk-2', symbol: '✨', x: 12, y: 92, scale: 1.1, rotation: -8 }
       ],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: true,
@@ -299,6 +310,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'selene',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Selene Film Reel',
     category: 'booth',
     tagline: 'Dark film strip with sprocket holes, Selene script & care symbols',
@@ -331,6 +343,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -346,6 +359,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'polkadot',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Snapobox Polka Dot',
     category: 'booth',
     tagline: 'Black & white polka dot background with handwritten studio logo',
@@ -378,6 +392,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -393,6 +408,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'boothycall',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Boothy Call Circles',
     category: 'booth',
     tagline: 'Circular photo cutouts on giant red polka dots with Boothy Call heart logo',
@@ -425,6 +441,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -442,6 +459,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   // --- ROMANCE & EVENTS CATEGORY ---
   {
     id: 'weddingribbon',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Wedding Scalloped Bows',
     category: 'romance',
     tagline: 'Navy blue & slate strip with delicate bow ties around scalloped photo frames',
@@ -474,6 +492,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -489,6 +508,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'wedding',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Wedding Minimalist',
     category: 'romance',
     tagline: 'Clean white strip, large elegant date stamp & couple names',
@@ -521,6 +541,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -536,6 +557,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'iloveyou',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'I ❤ YOU Headline',
     category: 'romance',
     tagline: 'Giant bold vintage I ❤ YOU header in classic serif typography',
@@ -568,6 +590,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -583,6 +606,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'lipstick',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Lipstick & Scrapbook',
     category: 'romance',
     tagline: 'Red lipstick kiss prints, love notes, red hearts & scrapbook tears',
@@ -618,6 +642,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'lip-2', symbol: '❤️', x: 12, y: 92, scale: 1.3, rotation: -10 }
       ],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -633,6 +658,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'callmebyname',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Call Me By Your Name',
     category: 'romance',
     tagline: 'Blush vintage beige canvas with muted warm monochrome photos',
@@ -665,6 +691,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -682,6 +709,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   // --- MUSIC & TECH CATEGORY ---
   {
     id: 'musicplayer',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Lavender Spotify Track',
     category: 'music',
     tagline: 'Soft pastel purple strip with music player title & playback bar',
@@ -714,6 +742,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       musicTrack: {
         title: 'Fix You',
@@ -733,6 +762,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'spotifydark',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Spotify Dark SNOOZE',
     category: 'music',
     tagline: 'Deep dark background with Spotify green accents & progress bar',
@@ -765,6 +795,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       musicTrack: {
         title: 'SNOOZE',
@@ -785,6 +816,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'ioslockscreen',
+    supportedLayouts: ['vertical-1x4'],
     name: 'iPhone Lockscreen',
     category: 'music',
     tagline: 'iOS clock header 11:26, date & music widget player at bottom',
@@ -817,6 +849,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       lockscreen: {
         time: '11:26',
@@ -838,6 +871,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'imessage',
+    supportedLayouts: ['vertical-1x4'],
     name: 'iMessage Reactions',
     category: 'music',
     tagline: 'iOS iMessage reaction bubbles (❤️, 👍, 😮) over photos & bottom chat bar',
@@ -870,6 +904,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -885,6 +920,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'y2kblue',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Y2K Cobalt Moment',
     category: 'music',
     tagline: 'Electric cobalt blue background, "EVERY MOMENT 1.0" & barcodes',
@@ -917,6 +953,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -934,6 +971,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   // --- VINTAGE & FILM CATEGORY ---
   {
     id: 'memoriesarchive',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Memories Archive Stamp',
     category: 'vintage',
     tagline: 'Cream/black vintage strip with "GOOD VIBES" stamp, tape strips, red seal & pass barcode',
@@ -966,6 +1004,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -981,6 +1020,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'editorial',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'EXCLUSIVE Editorial',
     category: 'vintage',
     tagline: 'Newspaper masthead headline "EXCLUSIVE" and "yeppo" footer mark',
@@ -1013,6 +1053,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -1028,6 +1069,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'film',
+    supportedLayouts: ['vertical-1x4'],
     name: 'Film Strip Sprocket',
     category: 'vintage',
     tagline: 'Kodak-inspired sprocket holes, dark frame, frame numbers',
@@ -1060,6 +1102,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: true,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: true,
@@ -1075,6 +1118,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'polaroid',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Polaroid Strip',
     category: 'vintage',
     tagline: 'Individual instant Polaroid frames with handwritten captions',
@@ -1109,6 +1153,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'p-stk-1', symbol: '❤️', x: 85, y: 94, scale: 1.3, rotation: 15 }
       ],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: true,
@@ -1124,6 +1169,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'retro90s',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Retro 90s Flash',
     category: 'vintage',
     tagline: 'Yellow/orange digital LED timestamp, film grain & flash burn',
@@ -1159,6 +1205,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
         { id: 'r-stk-2', symbol: '📸', x: 88, y: 88, scale: 1.1, rotation: 10 }
       ],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -1174,6 +1221,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'stripes',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Retro Bowling Stripes',
     category: 'vintage',
     tagline: 'Bold vertical maroon & sky blue striped frame with PhotoTrend mark',
@@ -1206,6 +1254,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -1221,6 +1270,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'scalloped',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Scalloped Wavy Frame',
     category: 'vintage',
     tagline: 'Decorative scalloped wavy border frame in playful pastel colors',
@@ -1253,6 +1303,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
@@ -1268,6 +1319,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
   },
   {
     id: 'minimal',
+    supportedLayouts: ['vertical-1x4', 'grid-2x2'],
     name: 'Minimal Gallery',
     category: 'vintage',
     tagline: 'Apple-inspired clean layout, subtle border, typography elegance',
@@ -1300,6 +1352,7 @@ export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
       showTimelineLabels: false,
       stickerList: [],
       exportFormat: 'strip2x6',
+      photoLayout: 'vertical-1x4',
       photoCount: 4,
       memoryCard: {
         enabled: false,
