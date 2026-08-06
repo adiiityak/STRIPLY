@@ -144,17 +144,22 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     };
 
     if (isLayoutSupported(config.photoLayout, template.supportedLayouts)) {
+      const retainedLayoutConfig = applyPhotoLayout(nextConfig, config.photoLayout);
       onChangeConfig({
-        ...nextConfig,
-        photoLayout: config.photoLayout,
-        photoCount: config.photoCount
+        ...retainedLayoutConfig,
+        photoCount:
+          config.photoLayout === 'grid-2x2'
+            ? retainedLayoutConfig.photoCount
+            : config.photoCount
       });
       return;
     }
 
+    const fallbackConfig = applyPhotoLayout(nextConfig, template.supportedLayouts[0]);
     onChangeConfig({
-      ...applyPhotoLayout(nextConfig, template.supportedLayouts[0]),
-      photoCount: config.photoCount
+      ...fallbackConfig,
+      photoCount:
+        fallbackConfig.photoLayout === 'grid-2x2' ? fallbackConfig.photoCount : config.photoCount
     });
   };
 

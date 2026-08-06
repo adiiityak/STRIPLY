@@ -61,4 +61,42 @@ describe('ControlsPanel template selection', () => {
       })
     );
   });
+
+  it('retains grid layout settings when switching to another grid-compatible template', () => {
+    const onChangeConfig = vi.fn();
+    const config: StripConfiguration = {
+      ...airmail.config,
+      photoLayout: 'grid-2x2',
+      photoCount: 6,
+      exportFormat: 'strip4x6'
+    };
+
+    render(
+      <ControlsPanel
+        photos={[]}
+        config={config}
+        onChangeConfig={onChangeConfig}
+        onUploadPhotos={vi.fn()}
+        onReorderPhotos={vi.fn()}
+        onRemovePhoto={vi.fn()}
+        onOpenWebcam={vi.fn()}
+        onAutoCropFaces={vi.fn()}
+        onAutoArrange={vi.fn()}
+        onAddSticker={vi.fn()}
+        onExportPNG={vi.fn()}
+        onExportPDF={vi.fn()}
+        isExporting={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Classic Photobooth' }));
+
+    expect(onChangeConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photoLayout: 'grid-2x2',
+        photoCount: 4,
+        exportFormat: 'strip4x6'
+      })
+    );
+  });
 });

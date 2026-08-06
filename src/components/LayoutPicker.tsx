@@ -22,10 +22,10 @@ export function LayoutPicker({ value, supportedLayouts, onChange }: LayoutPicker
   const supportsGrid = isLayoutSupported('grid-2x2', supportedLayouts);
 
   return (
-    <div className="space-y-2" aria-label="Photo layout">
-      <label className="text-xs font-black uppercase tracking-widest text-[#AAAAAA] block">
+    <fieldset className="space-y-2">
+      <legend className="text-xs font-black uppercase tracking-widest text-[#AAAAAA] block">
         Photo Layout
-      </label>
+      </legend>
       <div className="grid grid-cols-2 gap-2">
         {GUIDED_LAYOUTS.map((layout) => {
           const supported = isLayoutSupported(layout, supportedLayouts);
@@ -63,6 +63,6 @@ export function LayoutPicker({ value, supportedLayouts, onChange }: LayoutPicker
           This template supports the vertical strip only.
         </p>
       )}
-    </div>
+    </fieldset>
   );
 }

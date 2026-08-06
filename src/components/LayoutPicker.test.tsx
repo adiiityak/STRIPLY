@@ -14,6 +14,7 @@ describe('LayoutPicker', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: '2 by 2 grid' }));
     expect(onChange).toHaveBeenCalledWith('grid-2x2');
+    expect(screen.getByRole('group', { name: 'Photo Layout' })).toBeVisible();
   });
 
   it('explains when the selected template cannot use a grid', () => {

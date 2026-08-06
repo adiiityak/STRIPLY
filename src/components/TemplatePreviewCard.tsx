@@ -32,7 +32,7 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
           : 'border-[#E8E6DF] hover:border-[#CFCBC1] hover:bg-[#FAF9F6]'
       }`}
     >
-      <div className="aspect-[3/4] overflow-hidden bg-[#FAF9F6]">
+      <div className="aspect-[2/5] overflow-hidden bg-[#FAF9F6] md:aspect-[1/3]">
         {imageFailed ? (
           <div
             data-testid={`template-fallback-${template.id}`}
@@ -50,7 +50,9 @@ export function TemplatePreviewCard({ template, selected, onSelect }: TemplatePr
           <img
             src={`/template-previews/${template.id}.png`}
             alt={`${template.name} preview`}
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-contain"
             onError={() => setImageFailed(true)}
           />
         )}

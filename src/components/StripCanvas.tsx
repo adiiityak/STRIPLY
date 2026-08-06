@@ -301,6 +301,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
       photoLayout === 'grid-2x2'
         ? {
             display: 'grid',
+            position: 'relative',
             gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
             gap: `${photoArea.gap}px`,
@@ -634,14 +635,33 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             }}
           >
             {photos.length === 0 ? (
-              <div
-                data-photo-slot
-                className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400"
-              >
-                <Sparkles className="w-8 h-8 mb-2 opacity-50" />
-                <p className="text-sm font-medium">No photos added yet</p>
-                <p className="text-xs">Upload photos to render strip</p>
-              </div>
+              photoLayout === 'grid-2x2' ? (
+                <>
+                  {Array.from({ length: slotCount }, (_, index) => (
+                    <div
+                      key={`empty-placeholder-${index}`}
+                      data-photo-slot
+                      aria-hidden="true"
+                      className="w-full border-2 border-dashed border-zinc-300 rounded-xl"
+                      style={slotStyle}
+                    />
+                  ))}
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-zinc-400">
+                    <Sparkles className="w-8 h-8 mb-2 opacity-50" />
+                    <p className="text-sm font-medium">No photos added yet</p>
+                    <p className="text-xs">Upload photos to render strip</p>
+                  </div>
+                </>
+              ) : (
+                <div
+                  data-photo-slot
+                  className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400"
+                >
+                  <Sparkles className="w-8 h-8 mb-2 opacity-50" />
+                  <p className="text-sm font-medium">No photos added yet</p>
+                  <p className="text-xs">Upload photos to render strip</p>
+                </div>
+              )
             ) : (
               <>
               {visiblePhotos.map((photo, index) => (

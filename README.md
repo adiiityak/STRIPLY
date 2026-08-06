@@ -6,13 +6,14 @@ finished image or PDF.
 
 ## Prerequisites
 
-- Node.js 20 or newer
+- Node.js 22.22.2 or newer
 - npm
 
 ## Install and run
 
 ```bash
 npm install
+npx playwright install chromium
 npm run dev
 ```
 
