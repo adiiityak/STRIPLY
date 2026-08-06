@@ -3,7 +3,8 @@ import {
   clampPhotoCount,
   computeSlotLayout,
   computeColumnHeight,
-  computePhotoAreaLayout
+  computePhotoAreaLayout,
+  limitPhotosToSlots
 } from './stripLayout';
 
 describe('computeSlotLayout', () => {
@@ -88,6 +89,14 @@ describe('computePhotoAreaLayout', () => {
     expect(layout.rows).toBe(2);
     expect(layout.gap).toBe(14);
     expect(layout.height).toBeCloseTo(192.5);
+  });
+});
+
+describe('limitPhotosToSlots', () => {
+  it('limits a 2×2 grid to its four visible slots when a legacy strip has extra photos', () => {
+    const photos = ['one', 'two', 'three', 'four', 'five', 'six'];
+
+    expect(limitPhotosToSlots(photos, 4)).toEqual(['one', 'two', 'three', 'four']);
   });
 });
 

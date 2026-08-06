@@ -4,7 +4,8 @@ import { getFilterCSS, getFadeOpacity } from '../utils/filterUtils';
 import {
   computeSlotLayout,
   clampPhotoCount,
-  computePhotoAreaLayout
+  computePhotoAreaLayout,
+  limitPhotosToSlots
 } from '../utils/stripLayout';
 import { normalizePhotoLayout } from '../utils/photoLayout';
 import {
@@ -251,6 +252,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
     // (gap only — the strip's own outer margin never changes, see C1).
     const photoLayout = normalizePhotoLayout(config.photoLayout);
     const slotCount = photoLayout === 'grid-2x2' ? 4 : clampPhotoCount(config.photoCount);
+    const visiblePhotos = limitPhotosToSlots<PhotoItem>(photos, slotCount);
     const slotLayout = computeSlotLayout(slotCount, config.photoGap);
     const hasExtraSidePadding = config.style === 'film' || config.style === 'selene';
 
@@ -638,7 +640,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
               </div>
             ) : (
               <>
-              {photos.slice(0, slotCount).map((photo, index) => (
+              {visiblePhotos.map((photo, index) => (
                 <div
                   key={photo.id}
                   onClick={() => onEditPhoto?.(photo)}
@@ -756,7 +758,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   )}
                 </div>
               ))}
-              {Array.from({ length: Math.max(0, slotCount - photos.length) }).map((_, i) => (
+              {Array.from({ length: Math.max(0, slotCount - visiblePhotos.length) }).map((_, i) => (
                 <div
                   key={`placeholder-${i}`}
                   className="w-full border-2 border-dashed border-zinc-300"

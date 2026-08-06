@@ -75,3 +75,7 @@ export function computePhotoAreaLayout(
     height: 2 * slotHeight + metrics.photoGap
   };
 }
+
+export function limitPhotosToSlots<T>(photos: T[], slotCount: number): T[] {
+  return photos.slice(0, slotCount);
+}
