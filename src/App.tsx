@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
 import { StripCanvas } from './components/StripCanvas';
 import { ControlsPanel } from './components/ControlsPanel';
@@ -341,6 +342,9 @@ export default function App() {
           <span>{toast.msg}</span>
         </div>
       )}
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
