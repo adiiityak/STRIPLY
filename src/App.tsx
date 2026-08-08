@@ -207,10 +207,10 @@ export default function App() {
     }
   };
 
-  // On desktop the shell is exactly one viewport tall so the canvas and the controls
-  // panel each scroll internally. Mobile keeps normal document scrolling.
+  // The shell is exactly one viewport tall at every width: the canvas and the controls
+  // sheet each scroll internally, so the page itself never scrolls.
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
+    <div className="h-screen overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
       {/* Top Header */}
       <Header
         onOpenWebcam={() => setIsWebcamOpen(true)}
@@ -221,7 +221,7 @@ export default function App() {
       />
 
       {/* Main Workspace Area */}
-      <div className="flex-1 lg:min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
         {/* Middle Canvas Preview Area */}
         {/* Centring is done with my-auto on the strip wrapper rather than justify-center:
             auto margins still allow scrolling to the top once the strip overflows. */}
@@ -229,7 +229,7 @@ export default function App() {
           ref={viewportRef}
           // touch-pan-y keeps one-finger vertical scrolling native and smooth, while
           // suppressing the browser's own pinch so two fingers reach our zoom handler.
-          className={`flex-1 lg:min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto min-h-[320px] max-h-[60vh] lg:max-h-none touch-pan-y ${
+          className={`flex-1 min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto touch-pan-y ${
             isPanning ? 'cursor-grabbing' : canPan ? 'cursor-grab' : ''
           }`}
         >

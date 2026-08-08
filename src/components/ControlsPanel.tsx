@@ -294,15 +294,20 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     onReorderPhotos(newArr);
   };
 
-  // The rail is a fixed 68px vertical strip at every width, so the panel is always a row:
-  // rail on the left, content taking the rest. The content pane carries min-w-0 so it
-  // shrinks rather than forcing the panel wider than --panel-w.
+  // Mobile is a Canva-style bottom sheet: rounded top edge, a drag handle, the tool's content,
+  // and the scrolling tool bar pinned underneath it (ordering is set on the children).
+  // From lg up it reverts to a row: 68px vertical rail on the left, content filling the rest.
   return (
     <div
       id="controls-panel"
       style={{ '--panel-w': `${effectiveWidth}px` } as React.CSSProperties}
-      className="relative bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-row h-full overflow-hidden"
+      className="relative bg-white text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-[54vh] lg:h-full overflow-hidden rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] lg:rounded-none lg:shadow-none lg:border-l lg:border-[#E8E6DF]"
     >
+      {/* Sheet grab handle — visual affordance only, matching the reference UI. */}
+      <div className="lg:hidden shrink-0 flex justify-center pt-2 pb-1" aria-hidden="true">
+        <span className="h-1 w-9 rounded-full bg-[#E8E6DF]" />
+      </div>
+
       <ResizeHandle
         width={width}
         minWidth={minWidth}
@@ -326,7 +331,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
         role="tabpanel"
         aria-labelledby={`tool-tab-${activeTab}`}
         hidden={isCollapsed}
-        className="flex-1 min-w-0 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs"
+        className="order-1 lg:order-2 flex-1 min-w-0 min-h-0 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs"
       >
         {/* ================= TEMPLATES TAB ================= */}
         {activeTab === 'templates' && (

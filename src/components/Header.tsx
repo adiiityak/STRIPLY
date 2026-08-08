@@ -17,19 +17,19 @@ export const Header: React.FC<HeaderProps> = ({
   isExporting
 }) => {
   return (
-    <header className="bg-white/95 backdrop-blur-md border-b border-[#E8E6DF] text-[#2D2D2D] sticky top-0 z-40 px-4 py-3 shadow-xs shrink-0">
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+    <header className="bg-white/95 backdrop-blur-md border-b border-[#E8E6DF] text-[#2D2D2D] sticky top-0 z-40 px-3 py-2 lg:px-4 lg:py-3 shadow-xs shrink-0">
+      <div className="max-w-7xl mx-auto flex flex-nowrap lg:flex-wrap items-center justify-between gap-2 lg:gap-3">
         {/* Brand Logo & Tagline */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FF6B6B] rounded-xl flex items-center justify-center shadow-md transform -rotate-6">
-            <Camera className="w-5 h-5 text-white" />
+        <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+          <div className="w-8 h-8 lg:w-10 lg:h-10 shrink-0 bg-[#FF6B6B] rounded-xl flex items-center justify-center shadow-md transform -rotate-6">
+            <Camera className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black tracking-tighter text-[#FF6B6B]">
+              <h1 className="text-lg lg:text-2xl font-black tracking-tighter text-[#FF6B6B]">
                 STRIPLY
               </h1>
-              <span className="text-[10px] font-bold tracking-wider uppercase bg-[#FFF5F5] text-[#FF6B6B] border border-[#FF6B6B]/20 px-2.5 py-0.5 rounded-full">
+              <span className="hidden lg:inline-flex text-[10px] font-bold tracking-wider uppercase bg-[#FFF5F5] text-[#FF6B6B] border border-[#FF6B6B]/20 px-2.5 py-0.5 rounded-full">
                 Photo Booth
               </span>
             </div>
@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Quick Action Controls */}
-        <div className="flex items-center gap-2 flex-wrap ml-auto">
+        <div className="flex items-center gap-1.5 lg:gap-2 flex-nowrap lg:flex-wrap ml-auto shrink-0">
           {/* Web Cam Photobooth Button */}
           <button
             onClick={onOpenWebcam}
