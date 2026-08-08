@@ -103,3 +103,16 @@
   background-color: #bdb8ac;
 }
 
+
+/* Mobile browsers report 100vh as the viewport *behind* their toolbars, so a 100vh app
+   shell pushes its bottom edge under Chrome's and Safari's chrome. 100dvh tracks the
+   visible area instead. The 100vh line stays first as a fallback for browsers without dvh. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Keep the bottom tool bar clear of the iOS home indicator. */
+.safe-bottom {
+  padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
+}

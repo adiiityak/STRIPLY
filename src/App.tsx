@@ -7,6 +7,7 @@ import { ControlsPanel } from './components/ControlsPanel';
 import { WebcamModal } from './components/WebcamModal';
 import { PhotoEditModal } from './components/PhotoEditModal';
 import { ShareModal } from './components/ShareModal';
+import { StartScreen } from './components/StartScreen';
 import { PhotoItem, StripConfiguration, PlacedSticker } from './types';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
@@ -45,10 +46,11 @@ export default function App() {
     zoom: zoomLevel,
     onZoom: (next) => setZoomLevel(clampZoom(next))
   });
-  // The strip starts empty, so the booth opens straight away and the visit begins with
-  // capturing photos. Closing it (or denying the camera) drops the user into the normal
-  // editor, where uploading still works.
-  const [isWebcamOpen, setIsWebcamOpen] = useState<boolean>(true);
+  // The booth opens only when the user asks for it, so the camera permission prompt
+  // arrives with intent behind it rather than on page load.
+  const [isWebcamOpen, setIsWebcamOpen] = useState<boolean>(false);
+  // A visit begins on the start screen: capture, upload, or skip into the editor.
+  const [showStartScreen, setShowStartScreen] = useState<boolean>(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [editingPhoto, setEditingPhoto] = useState<PhotoItem | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -213,7 +215,7 @@ export default function App() {
   // The shell is exactly one viewport tall at every width: the canvas and the controls
   // sheet each scroll internally, so the page itself never scrolls.
   return (
-    <div className="h-screen overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
+    <div className="app-shell overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
       {/* Top Header */}
       <Header
         onOpenWebcam={() => setIsWebcamOpen(true)}
@@ -225,6 +227,20 @@ export default function App() {
 
       {/* Main Workspace Area */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
+        {showStartScreen && (
+          <StartScreen
+            onTakeLivePicture={() => {
+              setShowStartScreen(false);
+              setIsWebcamOpen(true);
+            }}
+            onUploadPhotos={(files) => {
+              handleUploadPhotos(files);
+              setShowStartScreen(false);
+            }}
+            onExploreApp={() => setShowStartScreen(false)}
+          />
+        )}
+
         {/* Middle Canvas Preview Area */}
         {/* Centring is done with my-auto on the strip wrapper rather than justify-center:
             auto margins still allow scrolling to the top once the strip overflows. */}

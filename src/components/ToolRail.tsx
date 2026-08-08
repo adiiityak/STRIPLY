@@ -82,7 +82,7 @@ export function ToolRail({ activeTool, isCollapsed, contentPanelId, onSelect }: 
       // Canva-style bottom bar on mobile: a horizontally scrolling row of icon-over-label
       // tabs. Reverts to the 68px vertical rail from lg up. `order` puts the bar below the
       // sheet content on mobile while keeping the rail first on desktop.
-      className="order-2 lg:order-1 w-full shrink-0 bg-white border-t border-[#E8E6DF] flex flex-row gap-1 px-2 py-1.5 overflow-x-auto no-scrollbar lg:w-[68px] lg:flex-col lg:bg-[#FAF9F6] lg:border-t-0 lg:border-r lg:p-1.5 lg:overflow-x-visible lg:overflow-y-auto"
+      className="order-2 lg:order-1 w-full shrink-0 bg-white border-t border-[#E8E6DF] flex flex-row gap-1 px-2 pt-1.5 safe-bottom overflow-x-auto no-scrollbar lg:w-[68px] lg:flex-col lg:bg-[#FAF9F6] lg:border-t-0 lg:border-r lg:p-1.5 lg:pb-1.5 lg:overflow-x-visible lg:overflow-y-auto"
     >
       {TOOL_TABS.map((tool, index) => {
         const Icon = tool.icon;
