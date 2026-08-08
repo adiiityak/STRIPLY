@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
 import { StripCanvas } from './components/StripCanvas';
 import { ControlsPanel } from './components/ControlsPanel';
@@ -345,6 +346,9 @@ export default function App() {
 
       {/* Vercel Speed Insights */}
       <SpeedInsights />
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
     </div>
   );
 }
