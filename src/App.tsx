@@ -45,7 +45,10 @@ export default function App() {
     zoom: zoomLevel,
     onZoom: (next) => setZoomLevel(clampZoom(next))
   });
-  const [isWebcamOpen, setIsWebcamOpen] = useState<boolean>(false);
+  // The strip starts empty, so the booth opens straight away and the visit begins with
+  // capturing photos. Closing it (or denying the camera) drops the user into the normal
+  // editor, where uploading still works.
+  const [isWebcamOpen, setIsWebcamOpen] = useState<boolean>(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [editingPhoto, setEditingPhoto] = useState<PhotoItem | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
