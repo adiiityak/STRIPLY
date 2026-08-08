@@ -317,9 +317,39 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             height: columnSizesToContent ? undefined : `${photoArea.height}px`
           };
 
+    // Slot and photo-box heights are resolved to explicit pixels here rather than left to
+    // flexbox. html-to-image clones the strip into an SVG foreignObject to rasterise it, and
+    // WebKit does not resolve a `flex: 1 1 0` chain inside that clone the way it does on the
+    // page: the boxes collapse to zero height, so the <img> draws nothing and the strip
+    // exports with its template intact but every photo slot blank. That is iPhone-only, which
+    // is why desktop never showed it. Explicit pixel heights clone deterministically.
+    // The numbers come from the same photoArea used above, so the constant strip height and
+    // the 4-photo baseline are unchanged.
+    const verticalSlotHeight =
+      slotCount > 0
+        ? (photoArea.height - (slotCount - 1) * slotLayout.gap) / slotCount
+        : photoArea.height;
+    const gridSlotHeight = (photoArea.height - photoArea.gap) / 2;
+    const resolvedSlotHeight = photoLayout === 'grid-2x2' ? gridSlotHeight : verticalSlotHeight;
+
+    // Styles that render a caption or frame numbering *below* the photo need that space
+    // reserved, since the photo box no longer flexes to make room for it.
+    const inFlowSiblingReserve =
+      config.style === 'polaroid' ? 26 : config.style === 'film' || config.style === 'selene' ? 18 : 0;
+    const verticalFramePadding = config.style === 'polaroid' ? 38 : config.framePadding * 2;
+    const resolvedPhotoBoxHeight = Math.max(
+      1,
+      resolvedSlotHeight - verticalFramePadding - inFlowSiblingReserve
+    );
+
+    // boothycall keeps intrinsic aspect-ratio sizing, which already clones correctly.
+    const usesResolvedHeights = !columnSizesToContent;
+
     const slotStyle: React.CSSProperties =
       photoLayout === 'grid-2x2'
-        ? { minWidth: 0, minHeight: 0, height: '100%' }
+        ? { minWidth: 0, minHeight: 0, height: `${gridSlotHeight}px` }
+        : usesResolvedHeights
+        ? { ...slotFlexStyle, flex: undefined, minHeight: undefined, height: `${resolvedSlotHeight}px` }
         : slotFlexStyle;
 
     // I3: boothycall's column sizes to content instead, so its circular photos stay square.
@@ -730,6 +760,12 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                     className="relative w-full overflow-hidden bg-zinc-100"
                     style={{
                       ...photoBoxStyle,
+                      // See the note by resolvedSlotHeight: an explicit height survives
+                      // html-to-image's foreignObject clone, where `flex: 1 1 0` collapses to
+                      // zero in WebKit and blanks the photo.
+                      ...(usesResolvedHeights
+                        ? { flex: undefined, minHeight: undefined, height: `${resolvedPhotoBoxHeight}px` }
+                        : null),
                       borderRadius: isBoothycall ? '9999px' : `${config.photoBorderRadius}px`
                     }}
                   >
