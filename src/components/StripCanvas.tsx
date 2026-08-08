@@ -312,8 +312,9 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             flexDirection: 'column',
             alignItems: 'center',
             gap: `${slotLayout.gap}px`,
-            height:
-              columnSizesToContent || photos.length === 0 ? undefined : `${photoArea.height}px`
+            // An empty strip now renders real placeholder slots, which use flex: 1 1 0 and so
+            // need a definite column height to divide; only boothycall still sizes to content.
+            height: columnSizesToContent ? undefined : `${photoArea.height}px`
           };
 
     const slotStyle: React.CSSProperties =
@@ -321,9 +322,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
         ? { minWidth: 0, minHeight: 0, height: '100%' }
         : slotFlexStyle;
 
-    // I3: boothycall's column sizes to content instead. I6: an empty strip has no photos to fill a
-    // fixed height, so content-size then too and let the h-64 placeholder set the height rather
-    // than leaving a tall blank column.
+    // I3: boothycall's column sizes to content instead, so its circular photos stay square.
     // Frame style classes
     const getFrameContainerClass = () => {
       switch (config.frameType) {
@@ -663,14 +662,24 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   </div>
                 </>
               ) : (
-                <div
-                  data-photo-slot
-                  className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400"
-                >
-                  <Sparkles className="w-8 h-8 mb-2 opacity-50" />
-                  <p className="text-sm font-medium">No photos added yet</p>
-                  <p className="text-xs">Upload photos to render strip</p>
-                </div>
+                // Render the real slots rather than one placeholder block, so an empty strip
+                // still shows its structure and how many photos it is waiting for.
+                <>
+                  {Array.from({ length: slotCount }, (_, index) => (
+                    <div
+                      key={`empty-placeholder-${index}`}
+                      data-photo-slot
+                      aria-hidden="true"
+                      className="w-full border-2 border-dashed border-zinc-300 rounded-xl"
+                      style={slotStyle}
+                    />
+                  ))}
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-zinc-400">
+                    <Sparkles className="w-8 h-8 mb-2 opacity-50" />
+                    <p className="text-sm font-medium">No photos added yet</p>
+                    <p className="text-xs">Upload photos to render strip</p>
+                  </div>
+                </>
               )
             ) : (
               <>

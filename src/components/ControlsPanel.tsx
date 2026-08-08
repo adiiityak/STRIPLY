@@ -349,7 +349,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                  className={`px-3 py-2 lg:px-2.5 lg:py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
                     selectedCategory === cat.id
                       ? 'bg-[#FF6B6B] text-white border-[#FF6B6B] shadow-xs'
                       : 'bg-white text-[#666666] border-[#E8E6DF] hover:bg-[#FAF9F6] hover:text-[#2D2D2D]'

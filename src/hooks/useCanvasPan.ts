@@ -7,6 +7,10 @@ export const DRAG_THRESHOLD = 4;
 interface UseCanvasPanOptions {
   /** Presses starting inside an element matching this selector never pan. */
   ignoreSelector?: string;
+  /** Current zoom, needed so a pinch scales from where it started. */
+  zoom?: number;
+  /** Called with the new zoom during a two-finger pinch. Clamping is the caller's job. */
+  onZoom?: (zoom: number) => void;
 }
 
 /**
@@ -22,9 +26,20 @@ export function useCanvasPan(
   containerRef: RefObject<HTMLElement | null>,
   options: UseCanvasPanOptions = {}
 ) {
-  const { ignoreSelector } = options;
+  const { ignoreSelector, zoom, onZoom } = options;
   const [isPanning, setIsPanning] = useState(false);
   const [canPan, setCanPan] = useState(false);
+
+  // Live values for the pointer handlers, which are bound once and must not close over
+  // a stale zoom or callback.
+  const zoomRef = useRef(zoom ?? 1);
+  const onZoomRef = useRef(onZoom);
+  zoomRef.current = zoom ?? 1;
+  onZoomRef.current = onZoom;
+
+  /** Active pointers, so a second finger can start a pinch. */
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ startDistance: number; startZoom: number } | null>(null);
 
   // Gesture bookkeeping lives in a ref so pointermove never re-renders per frame.
   const gesture = useRef<{
@@ -65,10 +80,27 @@ export function useCanvasPan(
     const el = containerRef.current;
     if (!el) return;
 
+    const distanceBetweenPointers = () => {
+      const [a, b] = [...pointers.current.values()];
+      if (!a || !b) return 0;
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return; // primary button only
       const target = event.target as Element | null;
       if (ignoreSelector && target?.closest?.(ignoreSelector)) return;
+
+      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+      // Second finger down: stop panning and start a pinch from the current spread.
+      if (pointers.current.size === 2 && onZoomRef.current) {
+        gesture.current = null;
+        setIsPanning(false);
+        pinch.current = { startDistance: distanceBetweenPointers(), startZoom: zoomRef.current };
+        return;
+      }
+      if (pointers.current.size !== 1) return;
 
       gesture.current = {
         pointerId: event.pointerId,
@@ -85,6 +117,19 @@ export function useCanvasPan(
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (pointers.current.has(event.pointerId)) {
+        pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+
+      // Pinch takes precedence: two fingers zoom rather than pan.
+      if (pinch.current && pointers.current.size >= 2) {
+        const distance = distanceBetweenPointers();
+        if (distance > 0 && pinch.current.startDistance > 0) {
+          onZoomRef.current?.((pinch.current.startZoom * distance) / pinch.current.startDistance);
+        }
+        return;
+      }
+
       const g = gesture.current;
       if (!g || event.pointerId !== g.pointerId) return;
       const dx = event.clientX - g.startX;
@@ -109,6 +154,16 @@ export function useCanvasPan(
     };
 
     const endGesture = (event: PointerEvent) => {
+      pointers.current.delete(event.pointerId);
+      // Lifting one finger ends the pinch; the remaining finger does not resume panning,
+      // otherwise the strip jumps as the pinch unwinds.
+      if (pinch.current && pointers.current.size < 2) {
+        pinch.current = null;
+        gesture.current = null;
+        setIsPanning(false);
+        return;
+      }
+
       const g = gesture.current;
       if (!g || event.pointerId !== g.pointerId) return;
       if (el.hasPointerCapture(event.pointerId)) el.releasePointerCapture(event.pointerId);
