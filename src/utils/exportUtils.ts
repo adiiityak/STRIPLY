@@ -68,11 +68,11 @@ async function waitForImages(element: HTMLElement): Promise<void> {
   await Promise.all(
     images.map(async (image) => {
       if (!image.complete) {
-        await new Promise<void>((resolve, reject) => {
+        // Resolve on error rather than reject: one unloadable image must not abort the whole
+        // export and leave the user with no file at all.
+        await new Promise<void>((resolve) => {
           image.addEventListener('load', () => resolve(), { once: true });
-          image.addEventListener('error', () => reject(new Error(`Failed to load ${image.alt || 'export image'}`)), {
-            once: true
-          });
+          image.addEventListener('error', () => resolve(), { once: true });
         });
       }
 
@@ -92,27 +92,12 @@ async function renderStripToPng(
   // frames use data URLs, so explicitly decode them before cloning the strip for export.
   await waitForImages(element);
 
-  // Captions are drawn with webfonts; rasterising before they load swaps in a fallback face.
-  if (document.fonts?.ready) {
-    await document.fonts.ready.catch(() => undefined);
-  }
-
   const options = {
     pixelRatio: scale,
     backgroundColor: transparent ? 'transparent' : undefined,
     cacheBust: true,
     filter: shouldIncludeInExport
   };
-
-  // A throwaway warm-up render primes html-to-image's clone of the strip, so the render we
-  // keep is never the first one WebKit rasterises. It runs at pixelRatio 1, roughly a ninth of
-  // the pixels of a scale-3 export, so the cost is small even on a phone.
-  //
-  // Note: this was originally added believing clone decode timing was why iPhone exports had
-  // blank photos. It was not -- that was flex-sized photo slots collapsing inside the SVG
-  // foreignObject, fixed by giving them explicit pixel heights in StripCanvas. This is kept as
-  // cheap insurance against genuine decode races, not as the fix for that bug.
-  await toPng(element, { ...options, pixelRatio: 1 }).catch(() => undefined);
 
   return toPng(element, options);
 }
