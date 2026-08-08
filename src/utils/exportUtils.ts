@@ -64,12 +64,31 @@ async function renderStripToPng(
   // frames use data URLs, so explicitly decode them before cloning the strip for export.
   await waitForImages(element);
 
-  return toPng(element, {
+  // Captions are drawn with webfonts; rasterising before they load swaps in a fallback face.
+  if (document.fonts?.ready) {
+    await document.fonts.ready.catch(() => undefined);
+  }
+
+  const options = {
     pixelRatio: scale,
     backgroundColor: transparent ? 'transparent' : undefined,
     cacheBust: true,
     filter: shouldIncludeInExport
-  });
+  };
+
+  // WebKit rasterises the cloned <img> nodes inside the SVG foreignObject before they have
+  // finished decoding, so on iOS Safari the strip exports with its template and text intact
+  // but every photo slot blank -- silently, with no error. Waiting on the *original* images
+  // above is not enough, because the clones decode separately.
+  //
+  // A throwaway warm-up render forces those clones through decode first; the second render is
+  // the one we keep. It runs at pixelRatio 1, roughly a ninth of the pixels of a scale-3
+  // export, so the extra cost is small even on a phone. It is unconditional rather than
+  // gated on a user-agent sniff, both to avoid brittle UA matching and so every browser takes
+  // the same code path.
+  await toPng(element, { ...options, pixelRatio: 1 }).catch(() => undefined);
+
+  return toPng(element, options);
 }
 
 export async function exportStripToDataUrl(
