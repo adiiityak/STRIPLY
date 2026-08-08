@@ -89,11 +89,18 @@ export default function App() {
             cropY: 20,
             zoom: 1
           };
-          setPhotos((prev) => [...prev, newPhoto].slice(0, 8));
+          setPhotos((prev) => {
+            const nextPhotos = [...prev, newPhoto].slice(0, 8);
+            return nextPhotos;
+          });
         }
       };
       reader.readAsDataURL(file);
     });
+
+    if (ArrayFiles.length >= 2 && ArrayFiles.length <= 6) {
+      setConfig((prev) => ({ ...prev, photoCount: ArrayFiles.length }));
+    }
 
     showToast(`Added ${ArrayFiles.length} photo(s)!`);
   };
@@ -109,6 +116,8 @@ export default function App() {
       caption: `Webcam Shot #${i + 1}`
     }));
     setPhotos(capturedItems);
+    const count = Math.min(6, Math.max(2, urls.length));
+    setConfig((prev) => ({ ...prev, photoCount: count }));
     showToast(`Added ${capturedItems.length} live webcam shots! 📸`);
   };
 

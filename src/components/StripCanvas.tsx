@@ -775,6 +775,9 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                       alt={photo.caption || `Photo ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300"
                       style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
                         filter: filterCSS,
                         transform: `scale(${photo.zoom || 1}) rotate(${photo.rotation || 0}deg)`,
                         objectPosition: `${photo.cropX ?? 50}% ${photo.cropY ?? 50}%`
