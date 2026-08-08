@@ -34,6 +34,34 @@ export function fitImageWithin(
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
 
+/**
+ * Saves a rendered data URL to disk.
+ *
+ * iOS Safari will not download a multi-megabyte `data:` URL from an <a download>: the click is
+ * accepted and nothing is written, which looked like "the animation runs but no file appears".
+ * Converting to a Blob and handing over an object URL works there, so exports go through this
+ * rather than assigning the data URL to the anchor directly.
+ */
+function saveDataUrl(dataUrl: string, filename: string): void {
+  const [meta, base64] = dataUrl.split(',');
+  const mime = /:(.*?);/.exec(meta)?.[1] ?? 'image/png';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: mime });
+
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = objectUrl;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Revoke on the next tick so the download has taken a reference to the blob first.
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+}
+
 async function waitForImages(element: HTMLElement): Promise<void> {
   const images = Array.from(element.querySelectorAll('img'));
 
@@ -76,16 +104,14 @@ async function renderStripToPng(
     filter: shouldIncludeInExport
   };
 
-  // WebKit rasterises the cloned <img> nodes inside the SVG foreignObject before they have
-  // finished decoding, so on iOS Safari the strip exports with its template and text intact
-  // but every photo slot blank -- silently, with no error. Waiting on the *original* images
-  // above is not enough, because the clones decode separately.
+  // A throwaway warm-up render primes html-to-image's clone of the strip, so the render we
+  // keep is never the first one WebKit rasterises. It runs at pixelRatio 1, roughly a ninth of
+  // the pixels of a scale-3 export, so the cost is small even on a phone.
   //
-  // A throwaway warm-up render forces those clones through decode first; the second render is
-  // the one we keep. It runs at pixelRatio 1, roughly a ninth of the pixels of a scale-3
-  // export, so the extra cost is small even on a phone. It is unconditional rather than
-  // gated on a user-agent sniff, both to avoid brittle UA matching and so every browser takes
-  // the same code path.
+  // Note: this was originally added believing clone decode timing was why iPhone exports had
+  // blank photos. It was not -- that was flex-sized photo slots collapsing inside the SVG
+  // foreignObject, fixed by giving them explicit pixel heights in StripCanvas. This is kept as
+  // cheap insurance against genuine decode races, not as the fix for that bug.
   await toPng(element, { ...options, pixelRatio: 1 }).catch(() => undefined);
 
   return toPng(element, options);
@@ -109,10 +135,7 @@ export async function downloadStripAsPNG(
 
     const dataUrl = await renderStripToPng(element, scale, options.transparent);
 
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = dataUrl;
-    link.click();
+    saveDataUrl(dataUrl, filename);
 
     // Trigger celebratory confetti!
     confetti({
@@ -127,6 +150,12 @@ export async function downloadStripAsPNG(
     throw err;
   }
 }
+
+// Repeating the same strip on a sheet must reuse one embedded image. Without an explicit
+// alias jsPDF re-processes the multi-megabyte PNG per placement, which on iOS Safari left the
+// second and third copies blank -- exactly why 4x6 and A4 came out with empty slots while the
+// single-placement 2x6 was fine. With an alias the bitmap is embedded once and referenced.
+const STRIP_ALIAS = 'striply-strip';
 
 export async function downloadStripAsPDF(
   element: HTMLElement,
@@ -152,7 +181,7 @@ export async function downloadStripAsPDF(
         width: 2,
         height: 6
       });
-      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height);
+      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS);
       pdf.save(filename);
     } else if (layoutType === '4x6_double') {
       // 4x6 inches = print 2 strips side-by-side
@@ -180,7 +209,8 @@ export async function downloadStripAsPDF(
         leftPlacement.x,
         leftPlacement.y,
         leftPlacement.width,
-        leftPlacement.height
+        leftPlacement.height,
+        STRIP_ALIAS
       );
       pdf.addImage(
         dataUrl,
@@ -188,7 +218,8 @@ export async function downloadStripAsPDF(
         rightPlacement.x,
         rightPlacement.y,
         rightPlacement.width,
-        rightPlacement.height
+        rightPlacement.height,
+        STRIP_ALIAS
       );
       pdf.save(filename);
     } else {
@@ -207,7 +238,7 @@ export async function downloadStripAsPDF(
           width: 55,
           height: 165
         });
-        pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height);
+        pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS);
       });
       pdf.save(filename);
     }
