@@ -34,22 +34,17 @@ export function fitImageWithin(
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
 
-/**
- * Saves a rendered data URL to disk.
- *
- * iOS Safari will not download a multi-megabyte `data:` URL from an <a download>: the click is
- * accepted and nothing is written, which looked like "the animation runs but no file appears".
- * Converting to a Blob and handing over an object URL works there, so exports go through this
- * rather than assigning the data URL to the anchor directly.
- */
-function saveDataUrl(dataUrl: string, filename: string): void {
+function dataUrlToBlob(dataUrl: string): Blob {
   const [meta, base64] = dataUrl.split(',');
   const mime = /:(.*?);/.exec(meta)?.[1] ?? 'image/png';
-  const binary = atob(base64);
+  const binary = atob(base64 || '');
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  const blob = new Blob([bytes], { type: mime });
+  return new Blob([bytes], { type: mime });
+}
 
+function saveDataUrl(dataUrl: string, filename: string): void {
+  const blob = dataUrlToBlob(dataUrl);
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.download = filename;
@@ -58,7 +53,6 @@ function saveDataUrl(dataUrl: string, filename: string): void {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  // Revoke on the next tick so the download has taken a reference to the blob first.
   setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
 }
 
@@ -88,16 +82,19 @@ async function renderStripToPng(
   scale: number,
   transparent: boolean = false
 ): Promise<string> {
-  // html-to-image does not wait for images whose source is already a data URL. Phone camera
-  // frames use data URLs, so explicitly decode them before cloning the strip for export.
+  // Wait for all images to settle and decode
   await waitForImages(element);
 
   const options = {
     pixelRatio: scale,
     backgroundColor: transparent ? 'transparent' : undefined,
-    cacheBust: true,
+    cacheBust: false, // cacheBust adds ?time query strings to data/blob URLs which invalidates them on WebKit/iOS
     filter: shouldIncludeInExport
   };
+
+  // WebKit rasterises the cloned <img> nodes inside the SVG foreignObject before they have
+  // finished decoding. A throwaway warm-up render forces those clones through decode first.
+  await toPng(element, { ...options, pixelRatio: 1 }).catch(() => undefined);
 
   return toPng(element, options);
 }
@@ -116,9 +113,32 @@ export async function downloadStripAsPNG(
   options: { scale?: number; transparent?: boolean } = {}
 ) {
   try {
-    const scale = options.scale || 3; // high resolution for crisp print/share
+    const scale = options.scale || 2.5;
 
     const dataUrl = await renderStripToPng(element, scale, options.transparent);
+    const blob = dataUrlToBlob(dataUrl);
+    const file = new File([blob], filename, { type: 'image/png' });
+
+    // On mobile devices (iOS Safari & Mobile Chrome), native Share Sheet is the cleanest way to save
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Striply Photo Strip'
+        });
+
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.8 }
+        });
+        return true;
+      } catch (shareErr: any) {
+        if (shareErr.name === 'AbortError') {
+          return false;
+        }
+      }
+    }
 
     saveDataUrl(dataUrl, filename);
 
@@ -150,11 +170,13 @@ export async function downloadStripAsPDF(
   try {
     const sourceWidth = element.clientWidth;
     const sourceHeight = element.clientHeight;
-    const dataUrl = await renderStripToPng(element, 3);
+    const dataUrl = await renderStripToPng(element, 2.5);
+
+    let pdf: jsPDF;
 
     if (layoutType === '2x6') {
       // 2x6 inches = 50.8mm x 152.4mm
-      const pdf = new jsPDF({
+      pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'in',
         format: [2, 6]
@@ -166,11 +188,10 @@ export async function downloadStripAsPDF(
         width: 2,
         height: 6
       });
-      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS);
-      pdf.save(filename);
+      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS, 'FAST');
     } else if (layoutType === '4x6_double') {
       // 4x6 inches = print 2 strips side-by-side
-      const pdf = new jsPDF({
+      pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'in',
         format: [4, 6]
@@ -195,7 +216,8 @@ export async function downloadStripAsPDF(
         leftPlacement.y,
         leftPlacement.width,
         leftPlacement.height,
-        STRIP_ALIAS
+        STRIP_ALIAS,
+        'FAST'
       );
       pdf.addImage(
         dataUrl,
@@ -204,12 +226,12 @@ export async function downloadStripAsPDF(
         rightPlacement.y,
         rightPlacement.width,
         rightPlacement.height,
-        STRIP_ALIAS
+        STRIP_ALIAS,
+        'FAST'
       );
-      pdf.save(filename);
     } else {
       // A4 grid (8.27 x 11.69 inches)
-      const pdf = new jsPDF({
+      pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
@@ -223,10 +245,62 @@ export async function downloadStripAsPDF(
           width: 55,
           height: 165
         });
-        pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS);
+        pdf.addImage(
+          dataUrl,
+          'PNG',
+          placement.x,
+          placement.y,
+          placement.width,
+          placement.height,
+          STRIP_ALIAS,
+          'FAST'
+        );
       });
-      pdf.save(filename);
     }
+
+    const pdfArrayBuffer = pdf.output('arraybuffer');
+    const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+    const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+    // Mobile Web Share API
+    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      try {
+        await navigator.share({
+          files: [pdfFile],
+          title: filename
+        });
+
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.8 }
+        });
+        return true;
+      } catch (shareErr: any) {
+        if (shareErr.name === 'AbortError') {
+          return false;
+        }
+      }
+    }
+
+    // Direct browser download
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = blobUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      const newWin = window.open(blobUrl, '_blank');
+      if (!newWin) {
+        window.location.href = blobUrl;
+      }
+    }
+
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
     confetti({
       particleCount: 50,
