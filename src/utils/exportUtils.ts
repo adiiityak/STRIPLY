@@ -1,6 +1,7 @@
-import { toPng } from 'html-to-image';
+import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
+import { inlineOklchFallbacks } from './oklch';
 
 export function constrainImageDimensions(
   width: number,
@@ -85,18 +86,40 @@ async function renderStripToPng(
   // Wait for all images to settle and decode
   await waitForImages(element);
 
-  const options = {
-    pixelRatio: scale,
-    backgroundColor: transparent ? 'transparent' : undefined,
-    cacheBust: false, // cacheBust adds ?time query strings to data/blob URLs which invalidates them on WebKit/iOS
-    filter: shouldIncludeInExport
-  };
+  // Rendered with html2canvas rather than html-to-image.
+  //
+  // html-to-image works by serialising the strip into an SVG <foreignObject> and letting the
+  // browser rasterise that. WebKit does not lay that clone out the way it lays out the live
+  // page, and every iPhone export failure traced back to it -- photo slots collapsing to zero
+  // height, images never decoding, whole exports producing no file. Each fix I tried was a
+  // different way of arguing with that clone.
+  //
+  // html2canvas takes the opposite approach: it walks the live DOM, reads each element's
+  // *resolved* geometry and computed styles, and paints them onto a canvas itself. There is no
+  // clone and no foreignObject, so the whole class of failure disappears rather than being
+  // timed around. It is already in the tree as a jsPDF dependency and is now a direct one.
+  //
+  // html2canvas 1.4.1 cannot parse oklch(), which Tailwind 4 uses for its whole palette, and
+  // throws on the first one it meets. The strip's colours are converted to rgb() for the
+  // duration of the render and restored immediately afterwards.
+  const restoreColours = inlineOklchFallbacks(element);
+  try {
+    const canvas = await html2canvas(element, {
+      scale,
+      // The strip paints its own background, so leave the canvas transparent underneath and
+      // let that show through, matching what the previous renderer produced.
+      backgroundColor: null,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      imageTimeout: 20_000,
+      ignoreElements: (node) => node.classList?.contains('no-export') ?? false
+    });
 
-  // WebKit rasterises the cloned <img> nodes inside the SVG foreignObject before they have
-  // finished decoding. A throwaway warm-up render forces those clones through decode first.
-  await toPng(element, { ...options, pixelRatio: 1 }).catch(() => undefined);
-
-  return toPng(element, options);
+    return canvas.toDataURL('image/png');
+  } finally {
+    restoreColours();
+  }
 }
 
 export async function exportStripToDataUrl(
