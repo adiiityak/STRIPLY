@@ -147,12 +147,22 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
           {errorMsg ? (
             <div className="text-center p-6 text-rose-400 text-sm max-w-sm">
               <p>{errorMsg}</p>
-              <button
-                onClick={startCamera}
-                className="mt-3 px-4 py-2 bg-[#FF6B6B] text-white rounded-xl text-xs font-semibold hover:bg-[#ff5252] transition-colors"
-              >
-                Retry Camera
-              </button>
+              {/* The booth opens automatically, so a denied camera must not be a dead end:
+                  offer a way straight into the editor alongside the retry. */}
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  onClick={startCamera}
+                  className="px-4 py-2 bg-[#FF6B6B] text-white rounded-xl text-xs font-semibold hover:bg-[#ff5252] transition-colors"
+                >
+                  Retry Camera
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-white/10 text-white border border-white/25 rounded-xl text-xs font-semibold hover:bg-white/20 transition-colors"
+                >
+                  Upload photos instead
+                </button>
+              </div>
             </div>
           ) : (
             <video

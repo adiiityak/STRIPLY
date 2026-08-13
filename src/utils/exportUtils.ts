@@ -1,6 +1,8 @@
+import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
+import { inlineOklchFallbacks } from './oklch';
 
 export function constrainImageDimensions(
   width: number,
@@ -34,17 +36,185 @@ export function fitImageWithin(
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
 
+export function shouldUseFileShareSheet(matchesTouchOnlyDevice: boolean): boolean {
+  return matchesTouchOnlyDevice;
+}
+
+function parseObjectPosition(value: string): { x: number; y: number } {
+  const parts = value.trim().split(/\s+/);
+  const parse = (part: string | undefined, fallback: number) => {
+    if (!part) return fallback;
+    if (part === 'left' || part === 'top') return 0;
+    if (part === 'right' || part === 'bottom') return 1;
+    if (part === 'center') return 0.5;
+    const percentage = Number.parseFloat(part);
+    return Number.isFinite(percentage) ? percentage / 100 : fallback;
+  };
+  return { x: parse(parts[0], 0.5), y: parse(parts[1], 0.5) };
+}
+
+export function getExportPhotoRasterSize(
+  displayWidth: number,
+  displayHeight: number,
+  exportScale: number,
+  sourceWidth: number,
+  sourceHeight: number
+): { width: number; height: number } {
+  const requestedWidth = Math.max(1, Math.round(displayWidth * exportScale));
+  const requestedHeight = Math.max(1, Math.round(displayHeight * exportScale));
+  const limit = Math.min(1, sourceWidth / requestedWidth, sourceHeight / requestedHeight);
+  return {
+    width: Math.max(1, Math.round(requestedWidth * limit)),
+    height: Math.max(1, Math.round(requestedHeight * limit))
+  };
+}
+
+async function rasteriseExportPhotos(element: HTMLElement, exportScale: number): Promise<() => void> {
+  const restores: Array<() => void> = [];
+  const images = Array.from(element.querySelectorAll<HTMLImageElement>('img[data-export-photo]'));
+
+  for (const image of images) {
+    const width = image.clientWidth;
+    const height = image.clientHeight;
+    if (!width || !height || !image.naturalWidth || !image.naturalHeight) continue;
+
+    const computed = getComputedStyle(image);
+    const canvas = document.createElement('canvas');
+    const rasterSize = getExportPhotoRasterSize(
+      width,
+      height,
+      exportScale,
+      image.naturalWidth,
+      image.naturalHeight
+    );
+    canvas.width = rasterSize.width;
+    canvas.height = rasterSize.height;
+    const context = canvas.getContext('2d');
+    if (!context) continue;
+
+    const sourceAspect = image.naturalWidth / image.naturalHeight;
+    const targetAspect = width / height;
+    let sourceWidth = image.naturalWidth;
+    let sourceHeight = image.naturalHeight;
+    if (computed.objectFit === 'cover') {
+      if (sourceAspect > targetAspect) sourceWidth = image.naturalHeight * targetAspect;
+      else sourceHeight = image.naturalWidth / targetAspect;
+    }
+    const position = parseObjectPosition(computed.objectPosition);
+    const sourceX = (image.naturalWidth - sourceWidth) * position.x;
+    const sourceY = (image.naturalHeight - sourceHeight) * position.y;
+
+    try {
+      context.filter = computed.filter === 'none' ? 'none' : computed.filter;
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+      const original = {
+        src: image.src,
+        filter: image.style.filter,
+        objectFit: image.style.objectFit,
+        objectPosition: image.style.objectPosition
+      };
+      image.src = canvas.toDataURL('image/png');
+      image.style.filter = 'none';
+      image.style.objectFit = 'fill';
+      image.style.objectPosition = '50% 50%';
+      await image.decode().catch(() => undefined);
+      restores.push(() => {
+        image.src = original.src;
+        image.style.filter = original.filter;
+        image.style.objectFit = original.objectFit;
+        image.style.objectPosition = original.objectPosition;
+      });
+    } catch (error) {
+      console.warn('Could not prepare one photo for export; using its live rendering.', error);
+    }
+  }
+
+  return () => restores.reverse().forEach((restore) => restore());
+}
+
+/**
+ * Some browser/GPU combinations let html2canvas finish successfully but hand back an empty
+ * bitmap. Treat a transparent or effectively uniform canvas as a failed render so callers do
+ * not save a blank PNG and then embed the same blank pixels in every PDF/share path.
+ */
+export function isCanvasVisuallyBlank(
+  canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
+): boolean {
+  if (canvas.width <= 0 || canvas.height <= 0) return true;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return true;
+
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const pixelCount = pixels.length / 4;
+  const step = Math.max(1, Math.floor(pixelCount / 12_000));
+  let sampled = 0;
+  let visible = 0;
+  let reference: [number, number, number] | null = null;
+  let contrasting = 0;
+
+  for (let pixel = 0; pixel < pixelCount; pixel += step) {
+    const index = pixel * 4;
+    sampled += 1;
+    if (pixels[index + 3] < 16) continue;
+    visible += 1;
+    const colour: [number, number, number] = [pixels[index], pixels[index + 1], pixels[index + 2]];
+    if (!reference) reference = colour;
+    else if (
+      Math.abs(colour[0] - reference[0]) +
+        Math.abs(colour[1] - reference[1]) +
+        Math.abs(colour[2] - reference[2]) >
+      24
+    ) {
+      contrasting += 1;
+    }
+  }
+
+  return visible / Math.max(1, sampled) < 0.01 || contrasting / Math.max(1, visible) < 0.002;
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, base64] = dataUrl.split(',');
+  const mime = /:(.*?);/.exec(meta)?.[1] ?? 'image/png';
+  const binary = atob(base64 || '');
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+function saveDataUrl(dataUrl: string, filename: string): void {
+  const blob = dataUrlToBlob(dataUrl);
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = objectUrl;
+  link.rel = 'noopener';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+}
+
 async function waitForImages(element: HTMLElement): Promise<void> {
   const images = Array.from(element.querySelectorAll('img'));
 
   await Promise.all(
     images.map(async (image) => {
       if (!image.complete) {
-        await new Promise<void>((resolve, reject) => {
+        // Resolve on error rather than reject: one unloadable image must not abort the whole
+        // export and leave the user with no file at all.
+        await new Promise<void>((resolve) => {
           image.addEventListener('load', () => resolve(), { once: true });
-          image.addEventListener('error', () => reject(new Error(`Failed to load ${image.alt || 'export image'}`)), {
-            once: true
-          });
+          image.addEventListener('error', () => resolve(), { once: true });
         });
       }
 
@@ -60,16 +230,70 @@ async function renderStripToPng(
   scale: number,
   transparent: boolean = false
 ): Promise<string> {
-  // html-to-image does not wait for images whose source is already a data URL. Phone camera
-  // frames use data URLs, so explicitly decode them before cloning the strip for export.
+  // Wait for all images to settle and decode
   await waitForImages(element);
+  const restorePhotos = await rasteriseExportPhotos(element, scale);
 
-  return toPng(element, {
-    pixelRatio: scale,
-    backgroundColor: transparent ? 'transparent' : undefined,
-    cacheBust: true,
-    filter: shouldIncludeInExport
-  });
+  // Rendered with html2canvas rather than html-to-image.
+  //
+  // html-to-image works by serialising the strip into an SVG <foreignObject> and letting the
+  // browser rasterise that. WebKit does not lay that clone out the way it lays out the live
+  // page, and every iPhone export failure traced back to it -- photo slots collapsing to zero
+  // height, images never decoding, whole exports producing no file. Each fix I tried was a
+  // different way of arguing with that clone.
+  //
+  // html2canvas takes the opposite approach: it walks the live DOM, reads each element's
+  // *resolved* geometry and computed styles, and paints them onto a canvas itself. There is no
+  // clone and no foreignObject, so the whole class of failure disappears rather than being
+  // timed around. It is already in the tree as a jsPDF dependency and is now a direct one.
+  //
+  // html2canvas 1.4.1 cannot parse oklch(), which Tailwind 4 uses for its whole palette, and
+  // throws on the first one it meets. The strip's colours are converted to rgb() for the
+  // duration of the render and restored immediately afterwards.
+  const restoreColours = inlineOklchFallbacks(element);
+  try {
+    try {
+      const canvas = await html2canvas(element, {
+        scale,
+        // Use the strip's resolved background instead of transparency. An opaque raster is more
+        // reliable in iOS share sheets and gives the blank-output check a deterministic surface.
+        backgroundColor: getComputedStyle(element).backgroundColor || '#ffffff',
+        useCORS: true,
+        // A tainted canvas cannot be read or encoded; CORS-safe images work without this escape.
+        allowTaint: false,
+        logging: false,
+        imageTimeout: 20_000,
+        ignoreElements: (node) => node.classList?.contains('no-export') ?? false
+      });
+
+      if (isCanvasVisuallyBlank(canvas)) {
+        throw new Error('Primary export renderer returned a blank canvas.');
+      }
+      return canvas.toDataURL('image/png');
+    } catch (primaryError) {
+      console.warn('Primary strip renderer failed; retrying with fallback renderer.', primaryError);
+      const dataUrl = await toPng(element, {
+        pixelRatio: scale,
+        backgroundColor: transparent ? 'transparent' : getComputedStyle(element).backgroundColor,
+        cacheBust: false,
+        filter: shouldIncludeInExport,
+        width: element.clientWidth,
+        height: element.clientHeight,
+        style: {
+          width: `${element.clientWidth}px`,
+          height: `${element.clientHeight}px`,
+          transform: 'none'
+        }
+      });
+      if (!dataUrl.startsWith('data:image/png;base64,') || dataUrl.length < 1_000) {
+        throw new Error('Both export renderers returned an empty image.');
+      }
+      return dataUrl;
+    }
+  } finally {
+    restorePhotos();
+    restoreColours();
+  }
 }
 
 export async function exportStripToDataUrl(
@@ -86,14 +310,47 @@ export async function downloadStripAsPNG(
   options: { scale?: number; transparent?: boolean } = {}
 ) {
   try {
-    const scale = options.scale || 3; // high resolution for crisp print/share
+    const scale = options.scale || 2.5;
 
     const dataUrl = await renderStripToPng(element, scale, options.transparent);
+    const blob = dataUrlToBlob(dataUrl);
+    const file = new File([blob], filename, { type: 'image/png' });
 
-    const link = document.createElement('a');
-    link.download = filename;
-    link.href = dataUrl;
-    link.click();
+    // The share sheet is the cleanest way to save on a phone, where a plain download is awkward
+    // to find afterwards. On a laptop it is the wrong behaviour: the user expects the file in
+    // Downloads, not a "share to Messages/Notes" dialog.
+    //
+    // `navigator.canShare({ files })` alone does not distinguish the two -- it is true on macOS
+    // Safari and desktop Chrome as well, which is why laptops were getting the share sheet. Gate
+    // it on the pointer type too: a phone or tablet reports a coarse primary pointer and no
+    // hover, a laptop does not.
+    const prefersShareSheet = shouldUseFileShareSheet(
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(pointer: coarse) and (any-hover: none)').matches
+    );
+
+    if (prefersShareSheet && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Striply Photo Strip'
+        });
+
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.8 }
+        });
+        return true;
+      } catch (shareErr: any) {
+        if (shareErr.name === 'AbortError') {
+          return false;
+        }
+      }
+    }
+
+    saveDataUrl(dataUrl, filename);
 
     // Trigger celebratory confetti!
     confetti({
@@ -109,6 +366,12 @@ export async function downloadStripAsPNG(
   }
 }
 
+// Repeating the same strip on a sheet must reuse one embedded image. Without an explicit
+// alias jsPDF re-processes the multi-megabyte PNG per placement, which on iOS Safari left the
+// second and third copies blank -- exactly why 4x6 and A4 came out with empty slots while the
+// single-placement 2x6 was fine. With an alias the bitmap is embedded once and referenced.
+const STRIP_ALIAS = 'striply-strip';
+
 export async function downloadStripAsPDF(
   element: HTMLElement,
   filename: string = 'striply-photo-strip.pdf',
@@ -117,11 +380,13 @@ export async function downloadStripAsPDF(
   try {
     const sourceWidth = element.clientWidth;
     const sourceHeight = element.clientHeight;
-    const dataUrl = await renderStripToPng(element, 3);
+    const dataUrl = await renderStripToPng(element, 2.5);
+
+    let pdf: jsPDF;
 
     if (layoutType === '2x6') {
       // 2x6 inches = 50.8mm x 152.4mm
-      const pdf = new jsPDF({
+      pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'in',
         format: [2, 6]
@@ -133,11 +398,10 @@ export async function downloadStripAsPDF(
         width: 2,
         height: 6
       });
-      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height);
-      pdf.save(filename);
+      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS, 'FAST');
     } else if (layoutType === '4x6_double') {
       // 4x6 inches = print 2 strips side-by-side
-      const pdf = new jsPDF({
+      pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'in',
         format: [4, 6]
@@ -161,7 +425,9 @@ export async function downloadStripAsPDF(
         leftPlacement.x,
         leftPlacement.y,
         leftPlacement.width,
-        leftPlacement.height
+        leftPlacement.height,
+        STRIP_ALIAS,
+        'FAST'
       );
       pdf.addImage(
         dataUrl,
@@ -169,12 +435,13 @@ export async function downloadStripAsPDF(
         rightPlacement.x,
         rightPlacement.y,
         rightPlacement.width,
-        rightPlacement.height
+        rightPlacement.height,
+        STRIP_ALIAS,
+        'FAST'
       );
-      pdf.save(filename);
     } else {
       // A4 grid (8.27 x 11.69 inches)
-      const pdf = new jsPDF({
+      pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
@@ -188,10 +455,69 @@ export async function downloadStripAsPDF(
           width: 55,
           height: 165
         });
-        pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height);
+        pdf.addImage(
+          dataUrl,
+          'PNG',
+          placement.x,
+          placement.y,
+          placement.width,
+          placement.height,
+          STRIP_ALIAS,
+          'FAST'
+        );
       });
-      pdf.save(filename);
     }
+
+    const pdfArrayBuffer = pdf.output('arraybuffer');
+    const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+    const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+    const prefersShareSheet = shouldUseFileShareSheet(
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(pointer: coarse) and (any-hover: none)').matches
+    );
+
+    // Native file sharing is reserved for phones/tablets. Desktop browsers such as Safari also
+    // report canShare({ files: true }), but users expect a PDF button to download immediately.
+    if (prefersShareSheet && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+      try {
+        await navigator.share({
+          files: [pdfFile],
+          title: filename
+        });
+
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.8 }
+        });
+        return true;
+      } catch (shareErr: any) {
+        if (shareErr.name === 'AbortError') {
+          return false;
+        }
+      }
+    }
+
+    // Direct browser download
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = blobUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      const newWin = window.open(blobUrl, '_blank');
+      if (!newWin) {
+        window.location.href = blobUrl;
+      }
+    }
+
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
     confetti({
       particleCount: 50,

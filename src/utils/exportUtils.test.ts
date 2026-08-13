@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as exportUtils from './exportUtils';
+import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
+
+vi.mock('html2canvas', () => ({ default: vi.fn() }));
+vi.mock('html-to-image', () => ({ toPng: vi.fn() }));
 
 type ExportSizingApi = {
   constrainImageDimensions?: (
@@ -13,11 +18,23 @@ type ExportSizingApi = {
     box: { x: number; y: number; width: number; height: number }
   ) => { x: number; y: number; width: number; height: number };
   shouldIncludeInExport?: (node: HTMLElement) => boolean;
+  isCanvasVisuallyBlank?: (
+    canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
+  ) => boolean;
+  shouldUseFileShareSheet?: (matchesTouchDevice: boolean) => boolean;
+  getExportPhotoRasterSize?: (
+    displayWidth: number,
+    displayHeight: number,
+    exportScale: number,
+    sourceWidth: number,
+    sourceHeight: number
+  ) => { width: number; height: number };
 };
 
 const sizing = exportUtils as ExportSizingApi;
 
 describe('export image sizing', () => {
+  afterEach(() => vi.restoreAllMocks());
   it('downsizes a phone camera frame without changing its aspect ratio', () => {
     expect(sizing.constrainImageDimensions?.(4032, 3024, 1280)).toEqual({
       width: 1280,
@@ -41,5 +58,76 @@ describe('export image sizing', () => {
 
   it('keeps text nodes that do not expose an element class list', () => {
     expect(sizing.shouldIncludeInExport?.({} as HTMLElement)).toBe(true);
+  });
+
+  it('detects a fully transparent export canvas as blank', () => {
+    const pixels = new Uint8ClampedArray(16 * 4);
+    const canvas = {
+      width: 4,
+      height: 4,
+      getContext: () => ({ getImageData: () => ({ data: pixels }) })
+    } as unknown as HTMLCanvasElement;
+
+    expect(sizing.isCanvasVisuallyBlank?.(canvas)).toBe(true);
+  });
+
+  it('accepts an export canvas with visible contrasting pixels', () => {
+    const pixels = new Uint8ClampedArray(100 * 4);
+    for (let index = 0; index < pixels.length; index += 4) {
+      pixels[index] = 243;
+      pixels[index + 1] = 234;
+      pixels[index + 2] = 225;
+      pixels[index + 3] = 255;
+    }
+    for (let pixel = 0; pixel < 20; pixel += 1) {
+      const index = pixel * 4;
+      pixels[index] = 25;
+      pixels[index + 1] = 40;
+      pixels[index + 2] = 70;
+    }
+    const canvas = {
+      width: 10,
+      height: 10,
+      getContext: () => ({ getImageData: () => ({ data: pixels }) })
+    } as unknown as HTMLCanvasElement;
+
+    expect(sizing.isCanvasVisuallyBlank?.(canvas)).toBe(false);
+  });
+
+  it('uses the independent renderer when the primary renderer returns a blank canvas', async () => {
+    const element = document.createElement('div');
+    Object.defineProperty(element, 'clientWidth', { value: 280 });
+    Object.defineProperty(element, 'clientHeight', { value: 980 });
+    const blankPixels = new Uint8ClampedArray(16 * 4);
+    vi.mocked(html2canvas).mockResolvedValue({
+      width: 4,
+      height: 4,
+      getContext: () => ({ getImageData: () => ({ data: blankPixels }) })
+    } as unknown as HTMLCanvasElement);
+    vi.mocked(toPng).mockResolvedValue(`data:image/png;base64,${'a'.repeat(2_000)}`);
+
+    const result = await exportUtils.exportStripToDataUrl(element, { scale: 1 });
+
+    expect(toPng).toHaveBeenCalledOnce();
+    expect(result.length).toBeGreaterThan(1_000);
+  });
+
+  it('uses direct downloads on desktop even when the browser supports file sharing', () => {
+    expect(sizing.shouldUseFileShareSheet?.(false)).toBe(false);
+  });
+
+  it('allows the native file share sheet on touch-only devices', () => {
+    expect(sizing.shouldUseFileShareSheet?.(true)).toBe(true);
+  });
+
+  it('prepares photo bitmaps at final export resolution without upscaling the source', () => {
+    expect(sizing.getExportPhotoRasterSize?.(240, 180, 2.5, 1600, 1200)).toEqual({
+      width: 600,
+      height: 450
+    });
+    expect(sizing.getExportPhotoRasterSize?.(800, 600, 2.5, 1600, 1200)).toEqual({
+      width: 1600,
+      height: 1200
+    });
   });
 });

@@ -294,14 +294,20 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     onReorderPhotos(newArr);
   };
 
-  // Stacked on mobile: the rail is a full-width horizontal bar there, so a row
-  // direction would let it consume the whole line and crush the content pane.
+  // Mobile is a Canva-style bottom sheet: rounded top edge, a drag handle, the tool's content,
+  // and the scrolling tool bar pinned underneath it (ordering is set on the children).
+  // From lg up it reverts to a row: 68px vertical rail on the left, content filling the rest.
   return (
     <div
       id="controls-panel"
       style={{ '--panel-w': `${effectiveWidth}px` } as React.CSSProperties}
-      className="relative bg-white border-l border-[#E8E6DF] text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-full overflow-hidden"
+      className="relative bg-white text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-[54vh] lg:h-full overflow-hidden rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] lg:rounded-none lg:shadow-none lg:border-l lg:border-[#E8E6DF]"
     >
+      {/* Sheet grab handle — visual affordance only, matching the reference UI. */}
+      <div className="lg:hidden shrink-0 flex justify-center pt-2 pb-1" aria-hidden="true">
+        <span className="h-1 w-9 rounded-full bg-[#E8E6DF]" />
+      </div>
+
       <ResizeHandle
         width={width}
         minWidth={minWidth}
@@ -325,7 +331,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
         role="tabpanel"
         aria-labelledby={`tool-tab-${activeTab}`}
         hidden={isCollapsed}
-        className="flex-1 min-w-0 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs"
+        className="order-1 lg:order-2 flex-1 min-w-0 min-h-0 overflow-y-auto p-5 space-y-6 custom-scrollbar text-xs"
       >
         {/* ================= TEMPLATES TAB ================= */}
         {activeTab === 'templates' && (
@@ -349,7 +355,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
+                  className={`px-3 py-2 lg:px-2.5 lg:py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-all border flex items-center gap-1.5 ${
                     selectedCategory === cat.id
                       ? 'bg-[#FF6B6B] text-white border-[#FF6B6B] shadow-xs'
                       : 'bg-white text-[#666666] border-[#E8E6DF] hover:bg-[#FAF9F6] hover:text-[#2D2D2D]'

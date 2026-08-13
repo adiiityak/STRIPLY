@@ -312,18 +312,47 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
             flexDirection: 'column',
             alignItems: 'center',
             gap: `${slotLayout.gap}px`,
-            height:
-              columnSizesToContent || photos.length === 0 ? undefined : `${photoArea.height}px`
+            // An empty strip now renders real placeholder slots, which use flex: 1 1 0 and so
+            // need a definite column height to divide; only boothycall still sizes to content.
+            height: columnSizesToContent ? undefined : `${photoArea.height}px`
           };
+
+    // Slot and photo-box heights are resolved to explicit pixels here rather than left to
+    // flexbox. html-to-image clones the strip into an SVG foreignObject to rasterise it, and
+    // WebKit does not resolve a `flex: 1 1 0` chain inside that clone the way it does on the
+    // page: the boxes collapse to zero height, so the <img> draws nothing and the strip
+    // exports with its template intact but every photo slot blank. That is iPhone-only, which
+    // is why desktop never showed it. Explicit pixel heights clone deterministically.
+    // The numbers come from the same photoArea used above, so the constant strip height and
+    // the 4-photo baseline are unchanged.
+    const verticalSlotHeight =
+      slotCount > 0
+        ? (photoArea.height - (slotCount - 1) * slotLayout.gap) / slotCount
+        : photoArea.height;
+    const gridSlotHeight = (photoArea.height - photoArea.gap) / 2;
+    const resolvedSlotHeight = photoLayout === 'grid-2x2' ? gridSlotHeight : verticalSlotHeight;
+
+    // Styles that render a caption or frame numbering *below* the photo need that space
+    // reserved, since the photo box no longer flexes to make room for it.
+    const inFlowSiblingReserve =
+      config.style === 'polaroid' ? 26 : config.style === 'film' || config.style === 'selene' ? 18 : 0;
+    const verticalFramePadding = config.style === 'polaroid' ? 38 : config.framePadding * 2;
+    const resolvedPhotoBoxHeight = Math.max(
+      1,
+      resolvedSlotHeight - verticalFramePadding - inFlowSiblingReserve
+    );
+
+    // boothycall keeps intrinsic aspect-ratio sizing, which already clones correctly.
+    const usesResolvedHeights = !columnSizesToContent;
 
     const slotStyle: React.CSSProperties =
       photoLayout === 'grid-2x2'
-        ? { minWidth: 0, minHeight: 0, height: '100%' }
+        ? { minWidth: 0, minHeight: 0, height: `${gridSlotHeight}px` }
+        : usesResolvedHeights
+        ? { ...slotFlexStyle, flex: undefined, minHeight: undefined, height: `${resolvedSlotHeight}px` }
         : slotFlexStyle;
 
-    // I3: boothycall's column sizes to content instead. I6: an empty strip has no photos to fill a
-    // fixed height, so content-size then too and let the h-64 placeholder set the height rather
-    // than leaving a tall blank column.
+    // I3: boothycall's column sizes to content instead, so its circular photos stay square.
     // Frame style classes
     const getFrameContainerClass = () => {
       switch (config.frameType) {
@@ -663,14 +692,24 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   </div>
                 </>
               ) : (
-                <div
-                  data-photo-slot
-                  className="w-full h-64 border-2 border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center p-6 text-center text-zinc-400"
-                >
-                  <Sparkles className="w-8 h-8 mb-2 opacity-50" />
-                  <p className="text-sm font-medium">No photos added yet</p>
-                  <p className="text-xs">Upload photos to render strip</p>
-                </div>
+                // Render the real slots rather than one placeholder block, so an empty strip
+                // still shows its structure and how many photos it is waiting for.
+                <>
+                  {Array.from({ length: slotCount }, (_, index) => (
+                    <div
+                      key={`empty-placeholder-${index}`}
+                      data-photo-slot
+                      aria-hidden="true"
+                      className="w-full border-2 border-dashed border-zinc-300 rounded-xl"
+                      style={slotStyle}
+                    />
+                  ))}
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-zinc-400">
+                    <Sparkles className="w-8 h-8 mb-2 opacity-50" />
+                    <p className="text-sm font-medium">No photos added yet</p>
+                    <p className="text-xs">Upload photos to render strip</p>
+                  </div>
+                </>
               )
             ) : (
               <>
@@ -721,15 +760,25 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                     className="relative w-full overflow-hidden bg-zinc-100"
                     style={{
                       ...photoBoxStyle,
+                      // See the note by resolvedSlotHeight: an explicit height survives
+                      // html-to-image's foreignObject clone, where `flex: 1 1 0` collapses to
+                      // zero in WebKit and blanks the photo.
+                      ...(usesResolvedHeights
+                        ? { flex: undefined, minHeight: undefined, height: `${resolvedPhotoBoxHeight}px` }
+                        : null),
                       borderRadius: isBoothycall ? '9999px' : `${config.photoBorderRadius}px`
                     }}
                   >
                     {/* Image with Filter */}
                     <img
+                      data-export-photo
                       src={photo.url}
                       alt={photo.caption || `Photo ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300"
                       style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
                         filter: filterCSS,
                         transform: `scale(${photo.zoom || 1}) rotate(${photo.rotation || 0}deg)`,
                         objectPosition: `${photo.cropX ?? 50}% ${photo.cropY ?? 50}%`
