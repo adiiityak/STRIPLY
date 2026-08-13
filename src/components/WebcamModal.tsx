@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, X, RefreshCw, Check, Sparkles, Play, StopCircle } from 'lucide-react';
+import { Camera, X, RefreshCw, Check, Sparkles, Play, Link2 } from 'lucide-react';
 import { constrainImageDimensions } from '../utils/exportUtils';
+import type { PhotoItem, StripConfiguration } from '../types';
+import { RemoteBooth } from './RemoteBooth';
 
 const MAX_CAPTURE_DIMENSION = 1280;
 
@@ -8,13 +10,18 @@ interface WebcamModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPhotosCaptured: (capturedDataUrls: string[]) => void;
+  onRemoteSessionComplete: (photos: PhotoItem[], config: StripConfiguration) => void;
 }
 
 export const WebcamModal: React.FC<WebcamModalProps> = ({
   isOpen,
   onClose,
-  onPhotosCaptured
+  onPhotosCaptured,
+  onRemoteSessionComplete
 }) => {
+  const [boothMode, setBoothMode] = useState<'choose' | 'solo' | 'remote'>(() =>
+    new URLSearchParams(location.search).has('room') ? 'remote' : 'choose'
+  );
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -26,7 +33,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
 
   // Initialize camera stream when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && boothMode === 'solo') {
       startCamera();
     } else {
       stopCamera();
@@ -34,7 +41,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
     return () => {
       stopCamera();
     };
-  }, [isOpen]);
+  }, [isOpen, boothMode]);
 
   const startCamera = async () => {
     setErrorMsg(null);
@@ -118,6 +125,44 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  if (boothMode === 'choose') {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="relative w-full max-w-lg rounded-3xl border border-[#E8E6DF] bg-white p-6 shadow-2xl">
+          <button onClick={onClose} aria-label="Close web booth" className="absolute right-4 top-4 rounded-full p-2 hover:bg-[#FAF9F6]"><X className="h-4 w-4" /></button>
+          <h3 className="text-xl font-black">Choose your Web Booth</h3>
+          <p className="mt-1 text-sm text-[#666]">Take photos here or connect with someone far away.</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <button onClick={() => setBoothMode('solo')} className="rounded-2xl border p-5 text-left hover:border-[#FF6B6B] hover:bg-[#FFF7F7]">
+              <Camera className="h-6 w-6 text-[#FF6B6B]" />
+              <span className="mt-3 block font-black">Solo Booth</span>
+              <span className="mt-1 block text-xs text-[#777]">Use this device’s camera</span>
+            </button>
+            <button onClick={() => setBoothMode('remote')} className="rounded-2xl border p-5 text-left hover:border-[#4ECDC4] hover:bg-[#F4FFFD]">
+              <Link2 className="h-6 w-6 text-[#25AFA5]" />
+              <span className="mt-3 block font-black">Long-Distance Booth</span>
+              <span className="mt-1 block text-xs text-[#777]">Join together with a room code</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (boothMode === 'remote') {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+        <div className="relative max-h-[96vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-[#E8E6DF] bg-white p-4 sm:p-6 shadow-2xl">
+          <div className="mb-4 flex items-center justify-between border-b pb-3">
+            <div><h3 className="font-black">Long-Distance Booth</h3><p className="text-xs text-[#666]">Side-by-side photos with one shared background</p></div>
+            <button onClick={onClose} aria-label="Close remote booth" className="rounded-full p-2 hover:bg-[#FAF9F6]"><X className="h-4 w-4" /></button>
+          </div>
+          <RemoteBooth onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); onClose(); }} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">

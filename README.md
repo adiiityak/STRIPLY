@@ -22,6 +22,9 @@ Open the local URL printed by the server (normally `http://localhost:3000`).
 ## What you can do
 
 - Capture photos with the live booth or upload existing images.
+- Create a **Long-Distance Booth** room, share its six-character code, and take
+  synchronized side-by-side photos with a partner. Either person can control
+  the countdown, retakes, shared background, and final handoff to the editor.
 - Apply templates, filters, captions, dates, frames, and stickers.
 - Choose **1 × 4** or **2 × 2** in the editor's **Photo Layout** control.
 - Browse templates by their visual previews in the template picker.
@@ -32,6 +35,14 @@ Some specialized templates support only the vertical 1 × 4 strip because their
 artwork, labels, and decorative elements are designed around that format. The
 2 × 2 option is disabled for those templates; choose a template that supports
 both layouts to switch between them.
+
+### Long-distance booth deployment
+
+Room state and WebRTC signaling use Socket.IO on the same server as the app.
+For reliable calls across mobile networks, configure the STUN/TURN values from
+`.env.example` in the deployed environment. Background removal runs in the
+browser only when selected; if the optional model cannot load, capture safely
+falls back to the original camera frames.
 
 ## Checks
 

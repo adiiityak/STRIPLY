@@ -56,6 +56,12 @@ export default function App() {
   const [editingPhoto, setEditingPhoto] = useState<PhotoItem | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has('room')) return;
+    setShowStartScreen(false);
+    setIsWebcamOpen(true);
+  }, []);
+
   // Toast Notification. One effect owns dismissal so the initial welcome message
   // expires like any other, and a new toast restarts the clock instead of being
   // cut short by the previous toast's timer.
@@ -121,6 +127,16 @@ export default function App() {
     const count = Math.min(6, Math.max(2, urls.length));
     setConfig((prev) => ({ ...prev, photoCount: count }));
     showToast(`Added ${capturedItems.length} live webcam shots! 📸`);
+  };
+
+  const handleRemoteSessionComplete = (
+    capturedPhotos: PhotoItem[],
+    sharedConfig: StripConfiguration
+  ) => {
+    setPhotos(capturedPhotos.slice(0, 4));
+    setConfig({ ...sharedConfig, photoCount: 4 });
+    setShowStartScreen(false);
+    showToast('Your long-distance booth is ready to edit! ✨');
   };
 
   // 4. Auto Crop Faces
@@ -340,6 +356,7 @@ export default function App() {
         isOpen={isWebcamOpen}
         onClose={() => setIsWebcamOpen(false)}
         onPhotosCaptured={handleWebcamPhotosCaptured}
+        onRemoteSessionComplete={handleRemoteSessionComplete}
       />
 
       {/* Social Media & Link Direct Sharing Modal */}

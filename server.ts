@@ -2,6 +2,8 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { createServer } from 'node:http';
+import { attachRoomSocketServer } from './server/roomSocket';
 
 const app = express();
 // The build emits CJS, where import.meta is empty, so paths are resolved from process.cwd()
@@ -114,6 +116,9 @@ Style: Warm, romantic/wholesome, nostalgic, photobooth memory book style. No quo
 });
 
 async function startServer() {
+  const httpServer = createServer(app);
+  attachRoomSocketServer(httpServer);
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -128,7 +133,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Striply Server running at http://0.0.0.0:${PORT}`);
   });
 }
