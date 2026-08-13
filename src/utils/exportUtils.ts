@@ -36,6 +36,89 @@ export function fitImageWithin(
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
 
+export function shouldUseFileShareSheet(matchesTouchOnlyDevice: boolean): boolean {
+  return matchesTouchOnlyDevice;
+}
+
+function parseObjectPosition(value: string): { x: number; y: number } {
+  const parts = value.trim().split(/\s+/);
+  const parse = (part: string | undefined, fallback: number) => {
+    if (!part) return fallback;
+    if (part === 'left' || part === 'top') return 0;
+    if (part === 'right' || part === 'bottom') return 1;
+    if (part === 'center') return 0.5;
+    const percentage = Number.parseFloat(part);
+    return Number.isFinite(percentage) ? percentage / 100 : fallback;
+  };
+  return { x: parse(parts[0], 0.5), y: parse(parts[1], 0.5) };
+}
+
+async function rasteriseExportPhotos(element: HTMLElement): Promise<() => void> {
+  const restores: Array<() => void> = [];
+  const images = Array.from(element.querySelectorAll<HTMLImageElement>('img[data-export-photo]'));
+
+  for (const image of images) {
+    const width = image.clientWidth;
+    const height = image.clientHeight;
+    if (!width || !height || !image.naturalWidth || !image.naturalHeight) continue;
+
+    const computed = getComputedStyle(image);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    const context = canvas.getContext('2d');
+    if (!context) continue;
+
+    const sourceAspect = image.naturalWidth / image.naturalHeight;
+    const targetAspect = width / height;
+    let sourceWidth = image.naturalWidth;
+    let sourceHeight = image.naturalHeight;
+    if (computed.objectFit === 'cover') {
+      if (sourceAspect > targetAspect) sourceWidth = image.naturalHeight * targetAspect;
+      else sourceHeight = image.naturalWidth / targetAspect;
+    }
+    const position = parseObjectPosition(computed.objectPosition);
+    const sourceX = (image.naturalWidth - sourceWidth) * position.x;
+    const sourceY = (image.naturalHeight - sourceHeight) * position.y;
+
+    try {
+      context.filter = computed.filter === 'none' ? 'none' : computed.filter;
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+      const original = {
+        src: image.src,
+        filter: image.style.filter,
+        objectFit: image.style.objectFit,
+        objectPosition: image.style.objectPosition
+      };
+      image.src = canvas.toDataURL('image/png');
+      image.style.filter = 'none';
+      image.style.objectFit = 'fill';
+      image.style.objectPosition = '50% 50%';
+      await image.decode().catch(() => undefined);
+      restores.push(() => {
+        image.src = original.src;
+        image.style.filter = original.filter;
+        image.style.objectFit = original.objectFit;
+        image.style.objectPosition = original.objectPosition;
+      });
+    } catch (error) {
+      console.warn('Could not prepare one photo for export; using its live rendering.', error);
+    }
+  }
+
+  return () => restores.reverse().forEach((restore) => restore());
+}
+
 /**
  * Some browser/GPU combinations let html2canvas finish successfully but hand back an empty
  * bitmap. Treat a transparent or effectively uniform canvas as a failed render so callers do
@@ -126,6 +209,7 @@ async function renderStripToPng(
 ): Promise<string> {
   // Wait for all images to settle and decode
   await waitForImages(element);
+  const restorePhotos = await rasteriseExportPhotos(element);
 
   // Rendered with html2canvas rather than html-to-image.
   //
@@ -184,6 +268,7 @@ async function renderStripToPng(
       return dataUrl;
     }
   } finally {
+    restorePhotos();
     restoreColours();
   }
 }
@@ -216,10 +301,11 @@ export async function downloadStripAsPNG(
     // Safari and desktop Chrome as well, which is why laptops were getting the share sheet. Gate
     // it on the pointer type too: a phone or tablet reports a coarse primary pointer and no
     // hover, a laptop does not.
-    const prefersShareSheet =
+    const prefersShareSheet = shouldUseFileShareSheet(
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
-      window.matchMedia('(pointer: coarse) and (any-hover: none)').matches;
+      window.matchMedia('(pointer: coarse) and (any-hover: none)').matches
+    );
 
     if (prefersShareSheet && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
@@ -363,8 +449,15 @@ export async function downloadStripAsPDF(
     const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
     const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-    // Mobile Web Share API
-    if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    const prefersShareSheet = shouldUseFileShareSheet(
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(pointer: coarse) and (any-hover: none)').matches
+    );
+
+    // Native file sharing is reserved for phones/tablets. Desktop browsers such as Safari also
+    // report canShare({ files: true }), but users expect a PDF button to download immediately.
+    if (prefersShareSheet && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
       try {
         await navigator.share({
           files: [pdfFile],

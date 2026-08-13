@@ -771,6 +771,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                   >
                     {/* Image with Filter */}
                     <img
+                      data-export-photo
                       src={photo.url}
                       alt={photo.caption || `Photo ${index + 1}`}
                       className="w-full h-full object-cover transition-transform duration-300"

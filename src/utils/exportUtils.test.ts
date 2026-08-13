@@ -21,6 +21,7 @@ type ExportSizingApi = {
   isCanvasVisuallyBlank?: (
     canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
   ) => boolean;
+  shouldUseFileShareSheet?: (matchesTouchDevice: boolean) => boolean;
 };
 
 const sizing = exportUtils as ExportSizingApi;
@@ -102,5 +103,13 @@ describe('export image sizing', () => {
 
     expect(toPng).toHaveBeenCalledOnce();
     expect(result.length).toBeGreaterThan(1_000);
+  });
+
+  it('uses direct downloads on desktop even when the browser supports file sharing', () => {
+    expect(sizing.shouldUseFileShareSheet?.(false)).toBe(false);
+  });
+
+  it('allows the native file share sheet on touch-only devices', () => {
+    expect(sizing.shouldUseFileShareSheet?.(true)).toBe(true);
   });
 });

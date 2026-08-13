@@ -82,7 +82,10 @@ test('export raster contains the complete strip instead of transparent or blank 
   expect(metrics.height).toBeGreaterThan(metrics.width);
   expect(metrics.opaqueRatio).toBeGreaterThan(0.98);
   expect(metrics.nonWhiteRatio).toBeGreaterThan(0.15);
-  expect(metrics.colourfulRatio).toBeGreaterThan(0.08);
+  // The selected template applies a subdued filter, so saturated pixels occupy only part of the
+  // full strip. Slot-specific tests below verify each photo separately; this remains a broad
+  // guard against an entirely neutral/blank raster.
+  expect(metrics.colourfulRatio).toBeGreaterThan(0.04);
 });
 
 test('downsizes full-resolution uploads before they enter the strip renderer', async ({ page }) => {
@@ -144,4 +147,55 @@ test('downsizes full-resolution uploads before they enter the strip renderer', a
   expect(slotColours[2][1]).toBeGreaterThan(slotColours[2][0] * 1.5);
   expect(slotColours[3][0]).toBeGreaterThan(slotColours[3][1] * 1.5);
   expect(slotColours[3][2]).toBeGreaterThan(slotColours[3][1] * 1.5);
+});
+
+test('export preserves cover cropping and CSS image filters', async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const source = document.createElement('canvas');
+    source.width = 600;
+    source.height = 100;
+    const sourceContext = source.getContext('2d');
+    if (!sourceContext) throw new Error('source context unavailable');
+    sourceContext.fillStyle = '#ff0000';
+    sourceContext.fillRect(0, 0, 200, 100);
+    sourceContext.fillStyle = '#00ff00';
+    sourceContext.fillRect(200, 0, 200, 100);
+    sourceContext.fillStyle = '#0000ff';
+    sourceContext.fillRect(400, 0, 200, 100);
+
+    const target = document.createElement('div');
+    target.style.cssText = 'position:fixed;left:0;top:0;width:200px;height:200px;overflow:hidden;background:white';
+    const photo = document.createElement('img');
+    photo.dataset.exportPhoto = '';
+    photo.src = source.toDataURL('image/png');
+    photo.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:50% 50%;filter:grayscale(1)';
+    target.appendChild(photo);
+    document.body.appendChild(target);
+    await photo.decode();
+
+    const moduleUrl = '/src/utils/exportUtils.ts';
+    const { exportStripToDataUrl } = await import(/* @vite-ignore */ moduleUrl);
+    const exported = new Image();
+    exported.src = await exportStripToDataUrl(target, { scale: 1 });
+    await exported.decode();
+    const output = document.createElement('canvas');
+    output.width = exported.naturalWidth;
+    output.height = exported.naturalHeight;
+    const outputContext = output.getContext('2d');
+    if (!outputContext) throw new Error('output context unavailable');
+    outputContext.drawImage(exported, 0, 0);
+    const left = Array.from(outputContext.getImageData(5, 100, 1, 1).data.slice(0, 3));
+    const centre = Array.from(outputContext.getImageData(100, 100, 1, 1).data.slice(0, 3));
+    const right = Array.from(outputContext.getImageData(195, 100, 1, 1).data.slice(0, 3));
+    target.remove();
+    return { left, centre, right };
+  });
+
+  // A 6:1 source covering a square must crop away the red and blue thirds. The remaining green
+  // centre is grayscale-filtered, so every sampled channel is approximately equal.
+  for (const sample of [result.left, result.centre, result.right]) {
+    expect(Math.max(...sample) - Math.min(...sample)).toBeLessThan(8);
+    expect(sample[0]).toBeGreaterThan(100);
+  }
 });
