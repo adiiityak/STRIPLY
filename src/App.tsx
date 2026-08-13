@@ -13,6 +13,7 @@ import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
 import { downloadStripAsPNG, downloadStripAsPDF, exportStripToDataUrl } from './utils/exportUtils';
 import { useCanvasPan } from './hooks/useCanvasPan';
+import { optimisePhotoFile } from './utils/photoImport';
 import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 
 const DEFAULT_TEMPLATE_ID = 'airmail';
@@ -73,30 +74,31 @@ export default function App() {
   }, [toast]);
 
   // 2. Upload Photos from Disk
-  const handleUploadPhotos = (files: FileList) => {
-    const newItems: PhotoItem[] = [];
+  const handleUploadPhotos = async (files: FileList) => {
     const ArrayFiles = Array.from(files).slice(0, 8 - photos.length);
 
-    ArrayFiles.forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          const newPhoto: PhotoItem = {
-            id: `upload-${Date.now()}-${index}`,
-            url: e.target.result as string,
-            originalUrl: e.target.result as string,
-            cropX: 50,
-            cropY: 20,
-            zoom: 1
-          };
-          setPhotos((prev) => {
-            const nextPhotos = [...prev, newPhoto].slice(0, 8);
-            return nextPhotos;
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      // Process sequentially so several full-resolution camera bitmaps are never decoded at the
+      // same time. This also preserves the user's selection order.
+      const imported: PhotoItem[] = [];
+      const importId = Date.now();
+      for (const [index, file] of ArrayFiles.entries()) {
+        const url = await optimisePhotoFile(file);
+        imported.push({
+          id: `upload-${importId}-${index}`,
+          url,
+          originalUrl: url,
+          cropX: 50,
+          cropY: 20,
+          zoom: 1
+        });
+      }
+      setPhotos((prev) => [...prev, ...imported].slice(0, 8));
+    } catch (error) {
+      console.error('Failed to import photos:', error);
+      showToast('One or more photos could not be prepared. Please try again.');
+      return;
+    }
 
     if (ArrayFiles.length >= 2 && ArrayFiles.length <= 6) {
       setConfig((prev) => ({ ...prev, photoCount: ArrayFiles.length }));
