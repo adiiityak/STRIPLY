@@ -22,6 +22,13 @@ type ExportSizingApi = {
     canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
   ) => boolean;
   shouldUseFileShareSheet?: (matchesTouchDevice: boolean) => boolean;
+  getExportPhotoRasterSize?: (
+    displayWidth: number,
+    displayHeight: number,
+    exportScale: number,
+    sourceWidth: number,
+    sourceHeight: number
+  ) => { width: number; height: number };
 };
 
 const sizing = exportUtils as ExportSizingApi;
@@ -111,5 +118,16 @@ describe('export image sizing', () => {
 
   it('allows the native file share sheet on touch-only devices', () => {
     expect(sizing.shouldUseFileShareSheet?.(true)).toBe(true);
+  });
+
+  it('prepares photo bitmaps at final export resolution without upscaling the source', () => {
+    expect(sizing.getExportPhotoRasterSize?.(240, 180, 2.5, 1600, 1200)).toEqual({
+      width: 600,
+      height: 450
+    });
+    expect(sizing.getExportPhotoRasterSize?.(800, 600, 2.5, 1600, 1200)).toEqual({
+      width: 1600,
+      height: 1200
+    });
   });
 });

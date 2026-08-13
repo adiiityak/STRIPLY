@@ -53,7 +53,23 @@ function parseObjectPosition(value: string): { x: number; y: number } {
   return { x: parse(parts[0], 0.5), y: parse(parts[1], 0.5) };
 }
 
-async function rasteriseExportPhotos(element: HTMLElement): Promise<() => void> {
+export function getExportPhotoRasterSize(
+  displayWidth: number,
+  displayHeight: number,
+  exportScale: number,
+  sourceWidth: number,
+  sourceHeight: number
+): { width: number; height: number } {
+  const requestedWidth = Math.max(1, Math.round(displayWidth * exportScale));
+  const requestedHeight = Math.max(1, Math.round(displayHeight * exportScale));
+  const limit = Math.min(1, sourceWidth / requestedWidth, sourceHeight / requestedHeight);
+  return {
+    width: Math.max(1, Math.round(requestedWidth * limit)),
+    height: Math.max(1, Math.round(requestedHeight * limit))
+  };
+}
+
+async function rasteriseExportPhotos(element: HTMLElement, exportScale: number): Promise<() => void> {
   const restores: Array<() => void> = [];
   const images = Array.from(element.querySelectorAll<HTMLImageElement>('img[data-export-photo]'));
 
@@ -64,8 +80,15 @@ async function rasteriseExportPhotos(element: HTMLElement): Promise<() => void> 
 
     const computed = getComputedStyle(image);
     const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(width));
-    canvas.height = Math.max(1, Math.round(height));
+    const rasterSize = getExportPhotoRasterSize(
+      width,
+      height,
+      exportScale,
+      image.naturalWidth,
+      image.naturalHeight
+    );
+    canvas.width = rasterSize.width;
+    canvas.height = rasterSize.height;
     const context = canvas.getContext('2d');
     if (!context) continue;
 
@@ -209,7 +232,7 @@ async function renderStripToPng(
 ): Promise<string> {
   // Wait for all images to settle and decode
   await waitForImages(element);
-  const restorePhotos = await rasteriseExportPhotos(element);
+  const restorePhotos = await rasteriseExportPhotos(element, scale);
 
   // Rendered with html2canvas rather than html-to-image.
   //
