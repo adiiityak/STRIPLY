@@ -1,4 +1,5 @@
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
 import { inlineOklchFallbacks } from './oklch';
@@ -34,6 +35,46 @@ export function fitImageWithin(
 
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
+
+/**
+ * Some browser/GPU combinations let html2canvas finish successfully but hand back an empty
+ * bitmap. Treat a transparent or effectively uniform canvas as a failed render so callers do
+ * not save a blank PNG and then embed the same blank pixels in every PDF/share path.
+ */
+export function isCanvasVisuallyBlank(
+  canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
+): boolean {
+  if (canvas.width <= 0 || canvas.height <= 0) return true;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return true;
+
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const pixelCount = pixels.length / 4;
+  const step = Math.max(1, Math.floor(pixelCount / 12_000));
+  let sampled = 0;
+  let visible = 0;
+  let reference: [number, number, number] | null = null;
+  let contrasting = 0;
+
+  for (let pixel = 0; pixel < pixelCount; pixel += step) {
+    const index = pixel * 4;
+    sampled += 1;
+    if (pixels[index + 3] < 16) continue;
+    visible += 1;
+    const colour: [number, number, number] = [pixels[index], pixels[index + 1], pixels[index + 2]];
+    if (!reference) reference = colour;
+    else if (
+      Math.abs(colour[0] - reference[0]) +
+        Math.abs(colour[1] - reference[1]) +
+        Math.abs(colour[2] - reference[2]) >
+      24
+    ) {
+      contrasting += 1;
+    }
+  }
+
+  return visible / Math.max(1, sampled) < 0.01 || contrasting / Math.max(1, visible) < 0.002;
+}
 
 function dataUrlToBlob(dataUrl: string): Blob {
   const [meta, base64] = dataUrl.split(',');
@@ -104,19 +145,44 @@ async function renderStripToPng(
   // duration of the render and restored immediately afterwards.
   const restoreColours = inlineOklchFallbacks(element);
   try {
-    const canvas = await html2canvas(element, {
-      scale,
-      // The strip paints its own background, so leave the canvas transparent underneath and
-      // let that show through, matching what the previous renderer produced.
-      backgroundColor: null,
-      useCORS: true,
-      allowTaint: true,
-      logging: false,
-      imageTimeout: 20_000,
-      ignoreElements: (node) => node.classList?.contains('no-export') ?? false
-    });
+    try {
+      const canvas = await html2canvas(element, {
+        scale,
+        // Use the strip's resolved background instead of transparency. An opaque raster is more
+        // reliable in iOS share sheets and gives the blank-output check a deterministic surface.
+        backgroundColor: getComputedStyle(element).backgroundColor || '#ffffff',
+        useCORS: true,
+        // A tainted canvas cannot be read or encoded; CORS-safe images work without this escape.
+        allowTaint: false,
+        logging: false,
+        imageTimeout: 20_000,
+        ignoreElements: (node) => node.classList?.contains('no-export') ?? false
+      });
 
-    return canvas.toDataURL('image/png');
+      if (isCanvasVisuallyBlank(canvas)) {
+        throw new Error('Primary export renderer returned a blank canvas.');
+      }
+      return canvas.toDataURL('image/png');
+    } catch (primaryError) {
+      console.warn('Primary strip renderer failed; retrying with fallback renderer.', primaryError);
+      const dataUrl = await toPng(element, {
+        pixelRatio: scale,
+        backgroundColor: transparent ? 'transparent' : getComputedStyle(element).backgroundColor,
+        cacheBust: false,
+        filter: shouldIncludeInExport,
+        width: element.clientWidth,
+        height: element.clientHeight,
+        style: {
+          width: `${element.clientWidth}px`,
+          height: `${element.clientHeight}px`,
+          transform: 'none'
+        }
+      });
+      if (!dataUrl.startsWith('data:image/png;base64,') || dataUrl.length < 1_000) {
+        throw new Error('Both export renderers returned an empty image.');
+      }
+      return dataUrl;
+    }
   } finally {
     restoreColours();
   }
