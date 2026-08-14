@@ -3,6 +3,7 @@ import { Camera, X, RefreshCw, Check, Sparkles, Play, Link2 } from 'lucide-react
 import { constrainImageDimensions } from '../utils/exportUtils';
 import type { PhotoItem, StripConfiguration } from '../types';
 import { RemoteBooth } from './RemoteBooth';
+import { CountdownOverlay } from './CountdownOverlay';
 
 const MAX_CAPTURE_DIMENSION = 1280;
 
@@ -237,13 +238,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
           {flash && <div className="absolute inset-0 bg-white z-40 animate-out fade-out duration-300" />}
 
           {/* Countdown Overlay */}
-          {countdown !== null && (
-            <div className="absolute inset-0 z-30 bg-black/40 backdrop-blur-xs flex flex-col items-center justify-center">
-              <div className="text-7xl font-black text-[#FF6B6B] animate-ping drop-shadow-md">
-                {countdown === 0 ? '📸 SNAP!' : countdown}
-              </div>
-            </div>
-          )}
+          <CountdownOverlay value={countdown} />
 
           {/* Target Count Indicator Badge */}
           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#2D2D2D] border border-[#E8E6DF] flex items-center gap-1.5 z-20 shadow-sm">

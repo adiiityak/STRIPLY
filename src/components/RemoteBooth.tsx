@@ -14,6 +14,7 @@ import type {
 import { shouldAnnounceReady } from '../remote/negotiation';
 import { isCountdownStale } from '../remote/countdown';
 import { BackgroundPicker } from './BackgroundPicker';
+import { CountdownOverlay } from './CountdownOverlay';
 import { RoomEntry } from './RoomEntry';
 import { optimiseSharedBackground } from '../utils/photoImport';
 
@@ -143,11 +144,7 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
             {partner?.name ?? 'Waiting…'}
           </span>
         </div>
-        {remaining !== null && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-7xl font-black text-white">
-            {remaining || '📸'}
-          </div>
-        )}
+        <CountdownOverlay value={remaining} />
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-[#666]">
