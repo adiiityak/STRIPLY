@@ -23,6 +23,22 @@ export const PhotoEditModal: React.FC<PhotoEditModalProps> = ({
   const [cropY, setCropY] = React.useState<number>(photo.cropY ?? 50);
   const [zoom, setZoom] = React.useState<number>(photo.zoom ?? 1);
   const [rotation, setRotation] = React.useState<number>(photo.rotation ?? 0);
+
+  /**
+   * Shape of a real photo slot in the strip.
+   *
+   * The preview was a fixed 4:3, the same shape as a webcam photo, so object-fit
+   * had nothing to crop and the position sliders moved nothing on screen -- the
+   * change only became visible after Apply, in a strip slot that is a different
+   * shape. Matching the slot makes the preview crop exactly as the strip does.
+   */
+  const [slotAspect, setSlotAspect] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const slot = document.querySelector('[data-photo-slot]');
+    const rect = slot?.getBoundingClientRect();
+    setSlotAspect(rect && rect.width > 0 && rect.height > 0 ? rect.width / rect.height : null);
+  }, [isOpen]);
   const [caption, setCaption] = React.useState<string>(photo.caption || '');
   const [yearLabel, setYearLabel] = React.useState<string>(photo.yearLabel || '');
 
@@ -57,7 +73,10 @@ export const PhotoEditModal: React.FC<PhotoEditModalProps> = ({
         </div>
 
         {/* Live Preview Frame */}
-        <div className="mt-4 bg-[#FAF9F6] rounded-2xl overflow-hidden aspect-[4/3] border border-[#E8E6DF] relative flex items-center justify-center">
+        <div
+          className="mt-4 bg-[#FAF9F6] rounded-2xl overflow-hidden border border-[#E8E6DF] relative flex items-center justify-center"
+          style={{ aspectRatio: slotAspect ?? '4 / 3' }}
+        >
           <img
             src={photo.url}
             alt="Edit target"

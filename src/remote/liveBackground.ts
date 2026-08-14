@@ -8,16 +8,25 @@ const MODEL_PATH =
 /** Backdrop drawn behind a cut-out person when no image is chosen. */
 export const REMOVED_BACKDROP = '#F7F4EF';
 
-/** Total segmentations per second across every feed on screen. */
-const TARGET_INTERVAL_MS = 1000 / 15;
-/** Cadence fallen back to when a device cannot hold the target. */
-const DEGRADED_INTERVAL_MS = 1000 / 8;
-/** A segmentation slower than this counts as a struggle. */
-const SLOW_FRAME_MS = 120;
-/** Consecutive slow segmentations before easing off. */
-const SLOW_FRAMES_BEFORE_DEGRADING = 5;
-/** Consecutive slow segmentations at the degraded cadence before giving up. */
-const SLOW_FRAMES_BEFORE_GIVING_UP = 15;
+/**
+ * Cadence tiers, in segmentations per second across every feed on screen.
+ *
+ * A slow device steps down through these rather than losing the preview. Giving
+ * up is reserved for a device that cannot manage even the slowest tier: a chunky
+ * background beats no background, and the previous guard quit so eagerly that a
+ * laptop running the model on its CPU never saw a preview at all.
+ */
+const INTERVAL_TIERS_MS = [1000 / 15, 1000 / 8, 1000 / 4];
+/** A segmentation slower than this counts as a struggle at the current tier. */
+const SLOW_FRAME_MS = 200;
+/** Consecutive slow segmentations before stepping down a tier. */
+const SLOW_FRAMES_BEFORE_DEGRADING = 8;
+/** Only a frame this catastrophic argues for abandoning the preview. */
+const HOPELESS_FRAME_MS = 900;
+/** Consecutive hopeless frames at the slowest tier before giving up. */
+const HOPELESS_FRAMES_BEFORE_GIVING_UP = 6;
+/** Early frames include model warm-up and say nothing about steady-state cost. */
+const WARMUP_FRAMES = 4;
 
 let segmenterPromise: Promise<MediaPipeImageSegmenter> | null = null;
 
@@ -26,12 +35,22 @@ async function getVideoSegmenter() {
     segmenterPromise = import('@mediapipe/tasks-vision')
       .then(async ({ FilesetResolver, ImageSegmenter }) => {
         const vision = await FilesetResolver.forVisionTasks(WASM_PATH);
-        return ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: MODEL_PATH },
-          outputCategoryMask: true,
-          outputConfidenceMasks: false,
-          runningMode: 'VIDEO'
-        });
+        const create = (delegate: 'GPU' | 'CPU') =>
+          ImageSegmenter.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: MODEL_PATH, delegate },
+            outputCategoryMask: true,
+            outputConfidenceMasks: false,
+            runningMode: 'VIDEO'
+          });
+        // Without an explicit delegate this model runs on the CPU, where a frame
+        // costs well over 100ms and the pacing guard below gives up almost
+        // immediately. The GPU delegate is the difference between a live preview
+        // and no preview at all.
+        try {
+          return await create('GPU');
+        } catch {
+          return create('CPU');
+        }
       })
       .catch((error) => {
         segmenterPromise = null;
@@ -116,8 +135,11 @@ const sources = new Set<Source>();
 let loopHandle = 0;
 let lastRunAt = 0;
 let lastTimestamp = 0;
-let interval = TARGET_INTERVAL_MS;
+let interval = INTERVAL_TIERS_MS[0];
+let tier = 0;
 let slowFrames = 0;
+let hopelessFrames = 0;
+let framesRun = 0;
 let cursor = 0;
 let activeSegmenter: MediaPipeImageSegmenter | null = null;
 
@@ -245,17 +267,52 @@ function tick() {
   }
   const elapsed = performance.now() - startedAt;
 
-  if (elapsed > SLOW_FRAME_MS) {
-    slowFrames += 1;
-    if (interval === TARGET_INTERVAL_MS && slowFrames >= SLOW_FRAMES_BEFORE_DEGRADING) {
-      interval = DEGRADED_INTERVAL_MS;
-    } else if (slowFrames >= SLOW_FRAMES_BEFORE_GIVING_UP) {
-      // Better an honest live feed than a stuttering composite.
-      stopAll('too-slow');
-    }
-  } else {
-    slowFrames = 0;
+  framesRun += 1;
+  if (framesRun <= WARMUP_FRAMES) return;
+
+  const verdict = judgeFrame({ elapsed, tier, slowFrames, hopelessFrames });
+  tier = verdict.tier;
+  slowFrames = verdict.slowFrames;
+  hopelessFrames = verdict.hopelessFrames;
+  interval = INTERVAL_TIERS_MS[tier];
+  if (verdict.giveUp) stopAll('too-slow');
+}
+
+export interface FrameVerdictInputs {
+  elapsed: number;
+  tier: number;
+  slowFrames: number;
+  hopelessFrames: number;
+}
+
+/**
+ * Decides whether to hold the current cadence, step down a tier, or stop.
+ *
+ * Split out so the pacing policy can be reasoned about and tested without a
+ * camera, a GPU, or a running animation frame loop.
+ */
+export function judgeFrame({ elapsed, tier, slowFrames, hopelessFrames }: FrameVerdictInputs) {
+  const slowestTier = INTERVAL_TIERS_MS.length - 1;
+
+  if (elapsed >= HOPELESS_FRAME_MS && tier >= slowestTier) {
+    const nextHopeless = hopelessFrames + 1;
+    return {
+      tier,
+      slowFrames: slowFrames + 1,
+      hopelessFrames: nextHopeless,
+      giveUp: nextHopeless >= HOPELESS_FRAMES_BEFORE_GIVING_UP
+    };
   }
+
+  if (elapsed > SLOW_FRAME_MS) {
+    const nextSlow = slowFrames + 1;
+    if (nextSlow >= SLOW_FRAMES_BEFORE_DEGRADING && tier < slowestTier) {
+      return { tier: tier + 1, slowFrames: 0, hopelessFrames: 0, giveUp: false };
+    }
+    return { tier, slowFrames: nextSlow, hopelessFrames, giveUp: false };
+  }
+
+  return { tier, slowFrames: 0, hopelessFrames: 0, giveUp: false };
 }
 
 /**
@@ -331,8 +388,11 @@ export function resetLiveBackgroundForTests() {
   loopHandle = 0;
   lastRunAt = 0;
   lastTimestamp = 0;
-  interval = TARGET_INTERVAL_MS;
+  interval = INTERVAL_TIERS_MS[0];
+  tier = 0;
   slowFrames = 0;
+  hopelessFrames = 0;
+  framesRun = 0;
   cursor = 0;
   activeSegmenter = null;
 }

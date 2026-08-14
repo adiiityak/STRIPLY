@@ -757,6 +757,7 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
 
                   {/* Outer Photo Container with Aspect Ratio */}
                   <div
+                    data-photo-slot
                     className="relative w-full overflow-hidden bg-zinc-100"
                     style={{
                       ...photoBoxStyle,
