@@ -50,6 +50,7 @@ export default function App() {
   // The booth opens only when the user asks for it, so the camera permission prompt
   // arrives with intent behind it rather than on page load.
   const [isWebcamOpen, setIsWebcamOpen] = useState<boolean>(false);
+  const [remoteEntryMode, setRemoteEntryMode] = useState<'create' | 'join' | undefined>();
   // A visit begins on the start screen: capture, upload, or skip into the editor.
   const [showStartScreen, setShowStartScreen] = useState<boolean>(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
@@ -245,7 +246,10 @@ export default function App() {
     <div className="app-shell overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
       {/* Top Header */}
       <Header
-        onOpenWebcam={() => setIsWebcamOpen(true)}
+        onOpenWebcam={() => {
+          setRemoteEntryMode(undefined);
+          setIsWebcamOpen(true);
+        }}
         onShuffleLayout={handleShuffleLayout}
         onQuickExportPNG={handleExportPNG}
         onOpenShareModal={() => setIsShareModalOpen(true)}
@@ -258,6 +262,7 @@ export default function App() {
           <StartScreen
             onTakeLivePicture={() => {
               setShowStartScreen(false);
+              setRemoteEntryMode(undefined);
               setIsWebcamOpen(true);
             }}
             onUploadPhotos={(files) => {
@@ -265,6 +270,16 @@ export default function App() {
               setShowStartScreen(false);
             }}
             onExploreApp={() => setShowStartScreen(false)}
+            onCreateRoom={() => {
+              setShowStartScreen(false);
+              setRemoteEntryMode('create');
+              setIsWebcamOpen(true);
+            }}
+            onJoinRoom={() => {
+              setShowStartScreen(false);
+              setRemoteEntryMode('join');
+              setIsWebcamOpen(true);
+            }}
           />
         )}
 
@@ -357,6 +372,7 @@ export default function App() {
         onClose={() => setIsWebcamOpen(false)}
         onPhotosCaptured={handleWebcamPhotosCaptured}
         onRemoteSessionComplete={handleRemoteSessionComplete}
+        initialRemoteAction={remoteEntryMode}
       />
 
       {/* Social Media & Link Direct Sharing Modal */}

@@ -7,10 +7,17 @@ interface RoomEntryProps {
   onJoin: (code: string, name: string) => void;
   busy: boolean;
   initialCode?: string;
+  initialMode?: 'choose' | 'create' | 'join';
 }
 
-export const RoomEntry: React.FC<RoomEntryProps> = ({ onCreate, onJoin, busy, initialCode = '' }) => {
-  const [mode, setMode] = useState<'choose' | 'create' | 'join'>(initialCode ? 'join' : 'choose');
+export const RoomEntry: React.FC<RoomEntryProps> = ({
+  onCreate,
+  onJoin,
+  busy,
+  initialCode = '',
+  initialMode = 'choose'
+}) => {
+  const [mode, setMode] = useState<'choose' | 'create' | 'join'>(initialCode ? 'join' : initialMode);
   const [name, setName] = useState('');
   const [code, setCode] = useState(normalizeRoomCode(initialCode));
 

@@ -11,13 +11,15 @@ interface WebcamModalProps {
   onClose: () => void;
   onPhotosCaptured: (capturedDataUrls: string[]) => void;
   onRemoteSessionComplete: (photos: PhotoItem[], config: StripConfiguration) => void;
+  initialRemoteAction?: 'create' | 'join';
 }
 
 export const WebcamModal: React.FC<WebcamModalProps> = ({
   isOpen,
   onClose,
   onPhotosCaptured,
-  onRemoteSessionComplete
+  onRemoteSessionComplete,
+  initialRemoteAction
 }) => {
   const [boothMode, setBoothMode] = useState<'choose' | 'solo' | 'remote'>(() =>
     new URLSearchParams(location.search).has('room') ? 'remote' : 'choose'
@@ -30,6 +32,15 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [flash, setFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (initialRemoteAction || new URLSearchParams(location.search).has('room')) {
+      setBoothMode('remote');
+    } else {
+      setBoothMode('choose');
+    }
+  }, [initialRemoteAction, isOpen]);
 
   // Initialize camera stream when modal opens
   useEffect(() => {
@@ -158,7 +169,10 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
             <div><h3 className="font-black">Long-Distance Booth</h3><p className="text-xs text-[#666]">Side-by-side photos with one shared background</p></div>
             <button onClick={onClose} aria-label="Close remote booth" className="rounded-full p-2 hover:bg-[#FAF9F6]"><X className="h-4 w-4" /></button>
           </div>
-          <RemoteBooth onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); onClose(); }} />
+          <RemoteBooth
+            entryMode={initialRemoteAction}
+            onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); onClose(); }}
+          />
         </div>
       </div>
     );

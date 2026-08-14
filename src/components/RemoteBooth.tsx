@@ -17,6 +17,7 @@ import { optimiseSharedBackground } from '../utils/photoImport';
 
 interface RemoteBoothProps {
   onComplete: (photos: PhotoItem[], config: StripConfiguration) => void;
+  entryMode?: 'create' | 'join';
 }
 
 interface RemoteBoothViewProps {
@@ -145,7 +146,7 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
   );
 };
 
-export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete }) => {
+export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode }) => {
   const session = useRoomSession();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -248,6 +249,7 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete }) => {
         <RoomEntry
           busy={session.status === 'connecting'}
           initialCode={new URLSearchParams(location.search).get('room') ?? ''}
+          initialMode={entryMode}
           onCreate={session.createRoom}
           onJoin={session.joinRoom}
         />

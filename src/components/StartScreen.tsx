@@ -1,10 +1,12 @@
 import React from 'react';
-import { Camera, ImagePlus } from 'lucide-react';
+import { Camera, ImagePlus, Link2, Users } from 'lucide-react';
 
 interface StartScreenProps {
   onTakeLivePicture: () => void;
   onUploadPhotos: (files: FileList) => void;
   onExploreApp: () => void;
+  onCreateRoom: () => void;
+  onJoinRoom: () => void;
 }
 
 /**
@@ -14,7 +16,9 @@ interface StartScreenProps {
 export const StartScreen: React.FC<StartScreenProps> = ({
   onTakeLivePicture,
   onUploadPhotos,
-  onExploreApp
+  onExploreApp,
+  onCreateRoom,
+  onJoinRoom
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -69,6 +73,29 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           className="hidden"
           onChange={handleFiles}
         />
+
+        <div className="my-1 flex items-center gap-3" aria-hidden="true">
+          <span className="h-px flex-1 bg-[#E8E6DF]" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#999]">Together online</span>
+          <span className="h-px flex-1 bg-[#E8E6DF]" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={onCreateRoom}
+            className="rounded-2xl border border-[#E8E6DF] bg-white px-3 py-3 text-xs font-bold text-[#2D2D2D] transition-colors hover:border-[#FF6B6B] hover:bg-[#FFF8F8] flex items-center justify-center gap-1.5"
+          >
+            <Users className="h-4 w-4 text-[#FF6B6B]" />
+            Create room
+          </button>
+          <button
+            onClick={onJoinRoom}
+            className="rounded-2xl border border-[#E8E6DF] bg-white px-3 py-3 text-xs font-bold text-[#2D2D2D] transition-colors hover:border-[#4ECDC4] hover:bg-[#F4FFFD] flex items-center justify-center gap-1.5"
+          >
+            <Link2 className="h-4 w-4 text-[#25AFA5]" />
+            Join room
+          </button>
+        </div>
       </div>
 
       <button

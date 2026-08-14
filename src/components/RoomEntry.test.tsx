@@ -3,6 +3,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { RoomEntry } from './RoomEntry';
 
 describe('RoomEntry', () => {
+  it('opens directly on the requested join form', () => {
+    render(
+      <RoomEntry
+        onCreate={vi.fn()}
+        onJoin={vi.fn()}
+        busy={false}
+        initialMode="join"
+      />
+    );
+
+    expect(screen.getByLabelText(/room code/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /create a room/i })).not.toBeInTheDocument();
+  });
+
   it('normalizes a pasted room code before joining', () => {
     const onJoin = vi.fn();
     render(<RoomEntry onCreate={vi.fn()} onJoin={onJoin} busy={false} />);
