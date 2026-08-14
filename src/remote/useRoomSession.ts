@@ -10,6 +10,7 @@ import type {
 
 interface UseRoomSessionOptions {
   socket?: RoomSocket;
+  requestTimeoutMs?: number;
 }
 
 interface StoredIdentity {
@@ -18,9 +19,11 @@ interface StoredIdentity {
 }
 
 const STORAGE_KEY = 'striply-remote-room';
+const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 
 export function useRoomSession(options: UseRoomSessionOptions = {}) {
   const socket = useMemo(() => options.socket ?? getRoomSocket(), [options.socket]);
+  const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
   const [snapshot, setSnapshot] = useState<RoomSnapshot | null>(null);
   const snapshotRef = useRef<RoomSnapshot | null>(null);
   const [self, setSelf] = useState<RoomIdentity | null>(null);
@@ -64,9 +67,20 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
   const enter = useCallback(
     (event: 'room:create' | 'room:join', payload: { name: string; code?: string }) =>
       new Promise<boolean>((resolve) => {
+        let settled = false;
         setStatus('connecting');
         setError(null);
+        const timeout = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          setStatus('error');
+          setError('The room service is unavailable. Please try again in a moment.');
+          resolve(false);
+        }, requestTimeoutMs);
         socket.emit(event as never, payload as never, ((result: RoomAck<{ identity: RoomIdentity; snapshot: RoomSnapshot }>) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeout);
           if (!result.ok || !result.data) {
             setStatus('error');
             setError(result.error?.message ?? 'Unable to enter the room.');
@@ -80,7 +94,7 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
           resolve(true);
         }) as never);
       }),
-    [accept, socket]
+    [accept, requestTimeoutMs, socket]
   );
 
   const command = useCallback(

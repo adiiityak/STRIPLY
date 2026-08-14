@@ -39,6 +39,9 @@ both layouts to switch between them.
 ### Long-distance booth deployment
 
 Room state and WebRTC signaling use Socket.IO on the same server as the app.
+On Vercel, `api/socket-io.ts` exposes the WebSocket endpoint at
+`/api/socket-io/socket.io`; Fluid Compute must be enabled for the project.
+Socket connections reconnect when a function reaches its maximum duration.
 For reliable calls across mobile networks, configure the STUN/TURN values from
 `.env.example` in the deployed environment. Background removal runs in the
 browser only when selected; if the optional model cannot load, capture safely

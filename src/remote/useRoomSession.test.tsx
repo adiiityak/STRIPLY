@@ -37,6 +37,27 @@ const snapshot = (revision: number): RoomSnapshot => ({
 });
 
 describe('useRoomSession', () => {
+  it('stops waiting and shows an error when the room server never acknowledges creation', async () => {
+    vi.useFakeTimers();
+    const socket = new FakeSocket();
+    const { result } = renderHook(() =>
+      useRoomSession({ socket: socket as any, requestTimeoutMs: 250 })
+    );
+
+    let created: Promise<boolean>;
+    act(() => {
+      created = result.current.createRoom('Maya');
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+
+    await expect(created!).resolves.toBe(false);
+    expect(result.current.status).toBe('error');
+    expect(result.current.error).toMatch(/room service.*unavailable/i);
+    vi.useRealTimers();
+  });
+
   it('ignores room snapshots older than the current authoritative revision', () => {
     const socket = new FakeSocket();
     const { result } = renderHook(() => useRoomSession({ socket: socket as any }));

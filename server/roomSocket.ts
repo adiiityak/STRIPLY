@@ -8,12 +8,21 @@ interface SocketData {
   participantId?: string;
 }
 
+interface RoomSocketServerOptions {
+  path?: string;
+}
+
 const channel = (code: string) => `room:${code}`;
 
-export function attachRoomSocketServer(httpServer: HttpServer, roomService: RoomService = createRoomService()) {
+export function attachRoomSocketServer(
+  httpServer: HttpServer,
+  roomService: RoomService = createRoomService(),
+  options: RoomSocketServerOptions = {}
+) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(httpServer, {
     cors: { origin: true, credentials: true },
-    maxHttpBufferSize: 1_000_000
+    maxHttpBufferSize: 1_000_000,
+    path: options.path ?? '/socket.io'
   });
 
   io.on('connection', (socket) => {

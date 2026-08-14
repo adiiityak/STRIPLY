@@ -11,14 +11,14 @@ afterEach(async () => {
   await Promise.all(cleanups.splice(0).map((cleanup) => cleanup()));
 });
 
-async function startSockets() {
+async function startSockets(path?: string) {
   const httpServer = createServer();
-  const io = attachRoomSocketServer(httpServer);
+  const io = attachRoomSocketServer(httpServer, undefined, { path });
   await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', resolve));
   const address = httpServer.address();
   if (!address || typeof address === 'string') throw new Error('missing test address');
   const url = `http://127.0.0.1:${address.port}`;
-  const connect = () => createClient(url, { transports: ['websocket'], forceNew: true }) as TestClient;
+  const connect = () => createClient(url, { transports: ['websocket'], forceNew: true, path }) as TestClient;
   cleanups.push(async () => {
     io.close();
     await new Promise<void>((resolve) => httpServer.close(() => resolve()));
@@ -31,6 +31,16 @@ function emitAck<T>(socket: TestClient, event: string, payload: unknown): Promis
 }
 
 describe('room socket server', () => {
+  it('accepts room creation on the production Vercel function path', async () => {
+    const { connect } = await startSockets('/api/socket-io/socket.io');
+    const creator = connect();
+
+    const created: any = await emitAck(creator, 'room:create', { name: 'Maya' });
+
+    expect(created.ok).toBe(true);
+    creator.disconnect();
+  });
+
   it('creates a room, joins a guest, and synchronizes shared updates', async () => {
     const { connect } = await startSockets();
     const creator = connect();
