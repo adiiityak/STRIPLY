@@ -4,7 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { createServer } from 'node:http';
 import { attachRoomSocketServer } from './server/roomSocket';
-import { ROOM_SOCKET_PATH } from './src/remote/roomClient';
+import { ROOM_SOCKET_PATH } from './src/remote/socketConfig';
 
 const app = express();
 // The build emits CJS, where import.meta is empty, so paths are resolved from process.cwd()

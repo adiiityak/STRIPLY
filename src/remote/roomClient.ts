@@ -1,12 +1,10 @@
 import { io, type Socket } from 'socket.io-client';
 import type { ClientToServerEvents, RoomSnapshot, ServerToClientEvents } from './types';
+import { ROOM_SOCKET_PATH } from './socketConfig';
+
+export { ROOM_SOCKET_PATH } from './socketConfig';
 
 export type RoomSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
-
-// Vercel exposes the Socket.IO server through api/socket-io.ts. Keeping local
-// development on the same path makes connection behavior identical in both
-// environments.
-export const ROOM_SOCKET_PATH = '/api/socket-io/socket.io';
 
 let singleton: RoomSocket | undefined;
 
@@ -15,8 +13,7 @@ export function getRoomSocket(): RoomSocket {
     singleton = io({
       autoConnect: true,
       path: ROOM_SOCKET_PATH,
-      // Vercel Functions support the WebSocket transport directly; Socket.IO's
-      // HTTP polling transport cannot share the upgraded function connection.
+      // Use WebSockets directly so room traffic stays on one persistent service.
       transports: ['websocket']
     });
   }

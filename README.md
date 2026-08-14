@@ -39,8 +39,10 @@ both layouts to switch between them.
 ### Long-distance booth deployment
 
 Room state and WebRTC signaling use Socket.IO on the same server as the app.
-On Vercel, `api/socket-io.ts` exposes the WebSocket endpoint at
-`/api/socket-io/socket.io`; Fluid Compute must be enabled for the project.
+On Vercel, the project uses the **Services** framework preset. `vercel.json`
+deploys the Vite app as the `web` service and a persistent Node/Socket.IO
+backend as the `room` service. Requests to `/api/socket-io/socket.io` are routed
+to that backend.
 Socket connections reconnect when a function reaches its maximum duration.
 For reliable calls across mobile networks, configure the STUN/TURN values from
 `.env.example` in the deployed environment. Background removal runs in the
