@@ -11,6 +11,8 @@ import type {
   SharedBackground,
   SharedRoomConfig
 } from '../remote/types';
+import { shouldAnnounceReady } from '../remote/negotiation';
+import { isCountdownStale } from '../remote/countdown';
 import { BackgroundPicker } from './BackgroundPicker';
 import { RoomEntry } from './RoomEntry';
 import { optimiseSharedBackground } from '../utils/photoImport';
@@ -57,11 +59,14 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
 }) => {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    if (!targetAt) return;
+    if (!targetAt || phase !== 'countdown') return;
     const timer = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(timer);
-  }, [targetAt]);
-  const remaining = targetAt ? Math.max(0, Math.ceil((targetAt - now) / 1000)) : null;
+  }, [phase, targetAt]);
+  const staleCountdown = isCountdownStale({ phase, captureTargetAt: targetAt, now });
+  // Hide the overlay for a countdown that never produced a frame, so the booth
+  // does not sit behind a frozen 📸.
+  const remaining = targetAt && !staleCountdown ? Math.max(0, Math.ceil((targetAt - now) / 1000)) : null;
   const partner = participants.find((participant) => participant.id !== selfId);
   const ready = participants.length === 2 && participants.every((participant) => participant.connection === 'connected');
 
@@ -128,7 +133,7 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
         {frameUrls.length < 4 ? (
           <button
             onClick={onCapture}
-            disabled={!ready || phase === 'countdown'}
+            disabled={!ready || (phase === 'countdown' && !staleCountdown)}
             className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-3 text-sm font-black text-white disabled:opacity-40"
           >
             <Camera className="h-4 w-4" /> Take photo {frameUrls.length + 1}/4
@@ -150,6 +155,7 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
   const session = useRoomSession();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const [frameUrls, setFrameUrls] = useState<string[]>([]);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -161,9 +167,27 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
     role: session.self?.participant.role,
     localStream,
     enabled: Boolean(session.snapshot?.participants.length === 2),
+    phase: session.snapshot?.phase ?? 'lobby',
     sendSignal,
     subscribeSignal
   });
+
+  // Tell the room this device can receive an offer. The server flips the room to
+  // 'ready' once both participants have said so, and only then does the creator
+  // negotiate -- so an offer can no longer land on a guest that is still waiting
+  // on its camera permission prompt.
+  const announcedReadyRef = useRef(false);
+  useEffect(() => {
+    if (
+      !shouldAnnounceReady({
+        hasLocalStream: Boolean(localStream),
+        isListeningForSignals: peer.isListeningForSignals,
+        alreadyAnnounced: announcedReadyRef.current
+      })
+    ) return;
+    announcedReadyRef.current = true;
+    void session.setReady(true);
+  }, [localStream, peer.isListeningForSignals, session.setReady]);
 
   useEffect(() => {
     if (session.status !== 'joined') return;
@@ -201,7 +225,14 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
     ) return;
     const delay = Math.max(0, snapshot.captureTargetAt - Date.now());
     const timer = window.setTimeout(async () => {
-      if (!localVideoRef.current || !remoteVideoRef.current || remoteVideoRef.current.readyState < 2) return;
+      // HAVE_CURRENT_DATA. Compositing a frame from a video with nothing decoded
+      // yet would produce a blank half, so skip the shot -- but say so, because a
+      // silent return used to leave the booth stuck behind a frozen countdown.
+      if (!localVideoRef.current || !remoteVideoRef.current || remoteVideoRef.current.readyState < 2) {
+        setCaptureError("Your partner's video has not arrived yet, so that shot was skipped. Try again.");
+        return;
+      }
+      setCaptureError(null);
       const index = snapshot.acceptedFrameIds.length;
       const background = snapshot.shared.background;
       const dataUrl = await composeRemoteFrame({
@@ -261,6 +292,7 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
   return (
     <>
       {cameraError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">{cameraError}</p>}
+      {captureError && <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">{captureError}</p>}
       <RemoteBoothView
         code={session.snapshot.code}
         participants={session.snapshot.participants}
