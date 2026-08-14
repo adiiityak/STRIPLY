@@ -10,7 +10,7 @@ const shared = {
 };
 
 describe('RemoteBoothView', () => {
-  it('shows shared capture controls to a guest as well as the creator', () => {
+  it('offers the guest the same one-tap start as the creator', () => {
     render(
       <RemoteBoothView
         code="ABC234"
@@ -31,7 +31,38 @@ describe('RemoteBoothView', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /take photo/i })).toBeInTheDocument();
+    // Either person can start the run, and it is a single press for all four.
+    const start = screen.getByRole('button', { name: /start photo booth/i });
+    expect(start).toBeInTheDocument();
+    expect(start).toBeEnabled();
+    // The finish step is automatic now, so nothing should ask to be pressed.
+    expect(screen.queryByRole('button', { name: /finish together/i })).not.toBeInTheDocument();
+  });
+
+  it('reports progress instead of inviting another press mid-run', () => {
+    render(
+      <RemoteBoothView
+        code="ABC234"
+        participants={[
+          { id: 'creator', name: 'Maya', role: 'creator', ready: true, connection: 'connected' },
+          { id: 'guest', name: 'Noah', role: 'guest', ready: true, connection: 'connected' }
+        ]}
+        selfId="guest"
+        shared={shared}
+        phase="countdown"
+        targetAt={Date.now() + 4_000}
+        frameUrls={['data:image/jpeg;base64,AAA']}
+        onCapture={vi.fn()}
+        onFinish={vi.fn()}
+        onRetake={vi.fn()}
+        onBackgroundChange={vi.fn()}
+        localVideoRef={{ current: null }}
+        remoteVideoRef={{ current: null }}
+      />
+    );
+
+    const control = screen.getByRole('button', { name: /taking photo 2 of 4/i });
+    expect(control).toBeDisabled();
   });
 
   it('shows two equal participant feed panels', () => {

@@ -1,10 +1,22 @@
 import React from 'react';
 import type { SharedBackground } from '../remote/types';
 
-const PRESETS = [
-  { name: 'Love notes', value: '/template-previews/pattern-love-notes.png' },
-  { name: 'Blue hearts', value: '/template-previews/pattern-blue-heart-tunnel.png' },
-  { name: 'Sunflowers', value: '/template-previews/pattern-sunflowers.png' }
+/**
+ * Backgrounds for the live booth.
+ *
+ * These point at /pattern-backgrounds/, the raw repeating tiles. The previous
+ * three pointed at /template-previews/, which holds four-photo strip mockups --
+ * so the "background" behind two people carried photo-strip frames, and the
+ * swatches in the picker showed little framed cards instead of the pattern.
+ */
+export const PRESETS = [
+  { name: 'Pink hearts', value: '/pattern-backgrounds/pink-heart-tunnel.png' },
+  { name: 'Blue hearts', value: '/pattern-backgrounds/blue-heart-tunnel.png' },
+  { name: 'Teal swirl', value: '/pattern-backgrounds/teal-contours.png' },
+  { name: 'Blue waves', value: '/pattern-backgrounds/blue-waves.png' },
+  { name: 'Burgundy swirl', value: '/pattern-backgrounds/burgundy-waves.png' },
+  { name: 'Wavy checker', value: '/pattern-backgrounds/wavy-checker.png' },
+  { name: 'Sunflowers', value: '/pattern-backgrounds/sunflowers.png' }
 ];
 
 interface BackgroundPickerProps {

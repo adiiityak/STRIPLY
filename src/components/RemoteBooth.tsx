@@ -19,6 +19,10 @@ import { optimiseSharedBackground } from '../utils/photoImport';
 
 /** How long the copy button holds its confirmed state before reverting. */
 const COPIED_FEEDBACK_MS = 2_000;
+/** Frames in a finished strip. Mirrors TOTAL_FRAMES on the room service. */
+const TOTAL_FRAMES = 4;
+/** Highest number the countdown overlay ever shows. */
+const COUNTDOWN_SECONDS = 5;
 
 interface RemoteBoothProps {
   onComplete: (photos: PhotoItem[], config: StripConfiguration) => void;
@@ -86,9 +90,17 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
   };
 
   const staleCountdown = isCountdownStale({ phase, captureTargetAt: targetAt, now });
+  // An automatic run is in progress. Restarting mid-run would reset the sequence,
+  // so the control reports progress instead of inviting another press.
+  const running = phase === 'countdown' && !staleCountdown;
   // Hide the overlay for a countdown that never produced a frame, so the booth
-  // does not sit behind a frozen 📸.
-  const remaining = targetAt && !staleCountdown ? Math.max(0, Math.ceil((targetAt - now) / 1000)) : null;
+  // does not sit behind a frozen 📸. The number is clamped because the gap
+  // between shots is longer than the countdown itself -- the pause should not
+  // show up as "6".
+  const remaining =
+    targetAt && !staleCountdown
+      ? Math.min(COUNTDOWN_SECONDS, Math.max(0, Math.ceil((targetAt - now) / 1000)))
+      : null;
   const partner = participants.find((participant) => participant.id !== selfId);
   const ready = participants.length === 2 && participants.every((participant) => participant.connection === 'connected');
 
@@ -165,23 +177,24 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
       </div>
 
       <div className="flex gap-2">
-        {frameUrls.length < 4 ? (
-          <button
-            onClick={onCapture}
-            disabled={!ready || (phase === 'countdown' && !staleCountdown)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-3 text-sm font-black text-white disabled:opacity-40"
-          >
-            <Camera className="h-4 w-4" /> Take photo {frameUrls.length + 1}/4
-          </button>
-        ) : (
-          <button
-            onClick={onFinish}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#2D2D2D] px-5 py-3 text-sm font-black text-white"
-          >
-            <Check className="h-4 w-4" /> Finish together
-          </button>
-        )}
+        <button
+          onClick={onCapture}
+          disabled={!ready || running}
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-3 text-sm font-black text-white disabled:opacity-40"
+        >
+          <Camera className="h-4 w-4" />
+          {running
+            ? `Taking photo ${Math.min(frameUrls.length + 1, TOTAL_FRAMES)} of ${TOTAL_FRAMES}…`
+            : frameUrls.length > 0
+              ? `Resume — ${frameUrls.length}/${TOTAL_FRAMES} taken`
+              : `Start photo booth — ${TOTAL_FRAMES} shots`}
+        </button>
       </div>
+      <p className="text-center text-[10px] text-[#777]">
+        {running
+          ? 'Hold still. The booth takes all four on its own.'
+          : `One tap takes ${TOTAL_FRAMES} photos with a countdown before each, then opens the editor.`}
+      </p>
     </div>
   );
 };
@@ -244,10 +257,14 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
   }, [peer.remoteStream]);
   useEffect(() => session.subscribeFrames(({ index, dataUrl }) => {
     setFrameUrls((current) => {
+      // Slot positions are meaningful, so a frame is written at its own index and
+      // holes are closed by splice. The previous filter(Boolean) compacted holes
+      // on every update, which silently shifted frames into the wrong slots when
+      // one arrived out of order.
       const next = [...current];
       if (dataUrl) next[index] = dataUrl;
       else next.splice(index, 1);
-      return next.filter(Boolean).slice(0, 4);
+      return next.slice(0, TOTAL_FRAMES);
     });
   }), [session.subscribeFrames]);
 

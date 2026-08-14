@@ -1,6 +1,16 @@
 import { constrainImageDimensions } from '../utils/exportUtils';
 import { removeBackground } from './backgroundRemoval';
 
+/**
+ * Frames travel to the partner through the signalling socket, which rejects
+ * anything over 900,000 data-URL characters (~675KB). A 1280px frame at q0.88
+ * can cross that on a busy shared background, and the rejection was silent, so
+ * the shot appeared on the shooting device and nowhere else. These values leave
+ * real headroom while staying well above the printed strip's needs.
+ */
+const CAPTURE_MAX_EDGE = 1_080;
+const CAPTURE_QUALITY = 0.82;
+
 export interface CoverCrop {
   sx: number;
   sy: number;
@@ -79,7 +89,7 @@ export async function composeRemoteFrame({
   localOnLeft = true,
   removeSourceBackgrounds = false
 }: ComposeRemoteFrameOptions): Promise<string> {
-  const bounded = constrainImageDimensions(width, height, 1280);
+  const bounded = constrainImageDimensions(width, height, CAPTURE_MAX_EDGE);
   const canvas = document.createElement('canvas');
   canvas.width = bounded.width;
   canvas.height = bounded.height;
@@ -116,7 +126,7 @@ export async function composeRemoteFrame({
   drawCover(context, preparedRemote, remoteX, 0, half, canvas.height);
   context.fillStyle = 'rgba(255,255,255,.72)';
   context.fillRect(half - 1, 0, 2, canvas.height);
-  return canvas.toDataURL('image/jpeg', 0.88);
+  return canvas.toDataURL('image/jpeg', CAPTURE_QUALITY);
 }
 
 export function getCaptureSourceDimensions(source: CaptureSource) {
