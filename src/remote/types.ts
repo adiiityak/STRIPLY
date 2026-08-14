@@ -92,6 +92,16 @@ export interface RemoteBoothResult {
   config: StripConfiguration;
 }
 
+/**
+ * Largest capture frame that may be sent to a partner, in data-URL characters.
+ *
+ * Shared so the sender can check before publishing. The server rejects anything
+ * larger, but in production the platform drops an outsized WebSocket message
+ * before the server ever sees it -- so a server-side complaint never arrives and
+ * the frame simply disappears.
+ */
+export const MAX_FRAME_CHARS = 900_000;
+
 export function normalizeRoomCode(value: string): string {
   return value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
 }

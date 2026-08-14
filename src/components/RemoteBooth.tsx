@@ -11,6 +11,7 @@ import type {
   SharedBackground,
   SharedRoomConfig
 } from '../remote/types';
+import { MAX_FRAME_CHARS } from '../remote/types';
 import { shouldAnnounceReady } from '../remote/negotiation';
 import { useLiveBackground } from '../remote/useLiveBackground';
 import { isCountdownStale } from '../remote/countdown';
@@ -328,7 +329,14 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
         localOnLeft: session.self?.participant.role === 'creator'
       });
       setFrameUrls((current) => [...current.slice(0, index), dataUrl, ...current.slice(index + 1)].slice(0, 4));
-      session.publishFrame(index, dataUrl);
+      if (dataUrl.length > MAX_FRAME_CHARS) {
+        // Checked here because an outsized message is dropped in transit in
+        // production, so waiting for the server to object means never hearing
+        // anything at all and the partner simply missing the photo.
+        setCaptureError('That photo was too large to send to your partner, so they will not see it.');
+      } else {
+        session.publishFrame(index, dataUrl);
+      }
       await session.acceptFrame(`frame-${index}-${Date.now()}`);
     }, delay);
     return () => window.clearTimeout(timer);

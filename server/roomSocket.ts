@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import type { ClientToServerEvents, RoomAck, ServerToClientEvents } from '../src/remote/types';
+import { MAX_FRAME_CHARS } from '../src/remote/types';
 import { createRoomService, RoomServiceError, type RoomService } from './roomService';
 
 interface SocketData {
@@ -14,14 +15,11 @@ interface RoomSocketServerOptions {
 
 const channel = (code: string) => `room:${code}`;
 
-/**
- * Largest capture frame accepted for relay, in data-URL characters.
- *
- * Kept comfortably below maxHttpBufferSize: exceeding the transport limit closes
- * the socket outright rather than dropping one message, which would take the
- * whole room down instead of costing a single frame.
- */
-const MAX_FRAME_CHARS = 900_000;
+// Kept comfortably below maxHttpBufferSize: exceeding the transport limit closes
+// the socket outright rather than dropping one message, which would take the
+// whole room down instead of costing a single frame. Senders check the same
+// limit before publishing, because in production an outsized message is dropped
+// in transit and this check never runs.
 
 export function attachRoomSocketServer(
   httpServer: HttpServer,
