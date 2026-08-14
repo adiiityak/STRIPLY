@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createRoomService, RoomServiceError } from './roomService';
+import {
+  COUNTDOWN_MS,
+  REVIEW_PAUSE_MS,
+  TOTAL_FRAMES,
+  createRoomService,
+  RoomServiceError
+} from './roomService';
 
 describe('RoomService', () => {
   it('creates a six-character room with the creator role', () => {
@@ -36,6 +42,28 @@ describe('RoomService', () => {
     expect(next.revision).toBe(1);
     expect(next.updatedBy).toBe('Noah');
     expect(next.shared.background.mode).toBe('preset');
+  });
+
+  it('accepts booth backgrounds from the pattern tile folder', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+
+    const next = service.updateSharedConfig(creator.snapshot.code, creator.identity.participant.id, 0, {
+      background: { mode: 'preset', value: '/pattern-backgrounds/pink-heart-tunnel.png' }
+    });
+
+    expect(next.shared.background.value).toBe('/pattern-backgrounds/pink-heart-tunnel.png');
+  });
+
+  it('still rejects a preset from anywhere else', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+
+    expect(() =>
+      service.updateSharedConfig(creator.snapshot.code, creator.identity.participant.id, 0, {
+        background: { mode: 'preset', value: 'https://elsewhere.example/tile.png' }
+      })
+    ).toThrow(RoomServiceError);
   });
 
   it('rejects stale updates with the authoritative snapshot', () => {
@@ -86,6 +114,49 @@ describe('RoomService', () => {
 
     const retaken = service.retakeFrame(creator.snapshot.code, guest.identity.participant.id, 0);
     expect(retaken.acceptedFrameIds).toEqual([]);
+  });
+
+  it('runs all four shots from a single start, without another press', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+    const guest = service.joinRoom(creator.snapshot.code, 'Noah');
+    const code = creator.snapshot.code;
+    const driver = guest.identity.participant.id;
+
+    const started = service.startCountdown(code, driver);
+    expect(started.captureTargetAt).toBe(1_000 + COUNTDOWN_MS);
+
+    // Shots 1-3 keep the run alive and schedule the next countdown themselves.
+    for (let shot = 1; shot < TOTAL_FRAMES; shot += 1) {
+      const accepted = service.acceptFrame(code, driver, `frame-${shot}`);
+      expect(accepted.phase).toBe('countdown');
+      expect(accepted.captureTargetAt).toBe(1_000 + REVIEW_PAUSE_MS + COUNTDOWN_MS);
+      // The same person drives the whole run, so the two devices cannot race.
+      expect(accepted.captureControllerId).toBe(driver);
+    }
+
+    const final = service.acceptFrame(code, driver, 'frame-4');
+    expect(final.acceptedFrameIds).toHaveLength(TOTAL_FRAMES);
+    // Straight to complete: the clients hand off to the editor with no finish press.
+    expect(final.phase).toBe('complete');
+    expect(final.captureTargetAt).toBeUndefined();
+    expect(final.captureControllerId).toBeUndefined();
+  });
+
+  it('halts the run on a retake so the next shutter does not fire', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+    service.joinRoom(creator.snapshot.code, 'Noah');
+    const code = creator.snapshot.code;
+    const driver = creator.identity.participant.id;
+
+    service.startCountdown(code, driver);
+    service.acceptFrame(code, driver, 'frame-1');
+    const retaken = service.retakeFrame(code, driver, 0);
+
+    expect(retaken.phase).toBe('ready');
+    expect(retaken.captureTargetAt).toBeUndefined();
+    expect(retaken.captureControllerId).toBeUndefined();
   });
 
   it('allows either participant to finish after four accepted frames', () => {

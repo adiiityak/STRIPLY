@@ -14,6 +14,15 @@ interface RoomSocketServerOptions {
 
 const channel = (code: string) => `room:${code}`;
 
+/**
+ * Largest capture frame accepted for relay, in data-URL characters.
+ *
+ * Kept comfortably below maxHttpBufferSize: exceeding the transport limit closes
+ * the socket outright rather than dropping one message, which would take the
+ * whole room down instead of costing a single frame.
+ */
+const MAX_FRAME_CHARS = 900_000;
+
 export function attachRoomSocketServer(
   httpServer: HttpServer,
   roomService: RoomService = createRoomService(),
@@ -21,7 +30,9 @@ export function attachRoomSocketServer(
 ) {
   const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(httpServer, {
     cors: { origin: true, credentials: true },
-    maxHttpBufferSize: 1_000_000,
+    // Headroom over MAX_FRAME_CHARS so an accepted frame plus protocol framing
+    // can never trip the transport limit and drop the connection.
+    maxHttpBufferSize: 2_000_000,
     path: options.path ?? '/socket.io'
   });
 
@@ -159,7 +170,17 @@ export function attachRoomSocketServer(
     socket.on('capture:publish', (payload) => {
       if (!socket.data.roomCode || !socket.data.participantId) return;
       if (!Number.isInteger(payload.index) || payload.index < 0 || payload.index > 3) return;
-      if (!payload.dataUrl.startsWith('data:image/jpeg;base64,') || payload.dataUrl.length > 900_000) return;
+      if (!payload.dataUrl.startsWith('data:image/jpeg;base64,')) return;
+      if (payload.dataUrl.length > MAX_FRAME_CHARS) {
+        // Dropping this silently is how a capture came out fine on the shooting
+        // device and never appeared on its partner's. Tell the sender instead.
+        console.warn(`Rejected an oversized capture frame: ${payload.dataUrl.length} chars`);
+        socket.emit('room:error', {
+          code: 'INVALID_PHASE',
+          message: 'That photo was too large to send to your partner. It was skipped.'
+        });
+        return;
+      }
       socket.to(channel(socket.data.roomCode)).emit('capture:frame', payload);
     });
 

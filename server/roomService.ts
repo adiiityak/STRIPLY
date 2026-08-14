@@ -13,6 +13,13 @@ const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_TTL_MS = 30 * 60 * 1000;
 const RECONNECT_GRACE_MS = 60 * 1000;
 
+/** Frames in a finished strip. */
+export const TOTAL_FRAMES = 4;
+/** Visible 5-4-3-2-1 before each shutter. */
+export const COUNTDOWN_MS = 5_000;
+/** Beat after a shutter so both people can see the frame that was taken. */
+export const REVIEW_PAUSE_MS = 1_500;
+
 interface InternalParticipant extends ParticipantSnapshot {
   reconnectToken: string;
   disconnectedAt?: number;
@@ -120,7 +127,12 @@ export function createRoomService(options: RoomServiceOptions = {}) {
       return;
     }
     const value = background.value ?? '';
-    const isPreset = background.mode === 'preset' && /^\/template-previews\/[a-z0-9-]+\.png$/.test(value);
+    // Booth backgrounds are the raw tiles under /pattern-backgrounds/. The
+    // template-previews path stays allowed so a client mid-session on the older
+    // build does not have its background rejected.
+    const isPreset =
+      background.mode === 'preset' &&
+      /^\/(pattern-backgrounds|template-previews)\/[a-z0-9-]+\.png$/.test(value);
     const isUpload =
       background.mode === 'uploaded' &&
       value.startsWith('data:image/jpeg;base64,') &&
@@ -229,7 +241,9 @@ export function createRoomService(options: RoomServiceOptions = {}) {
       getParticipant(room, participantId);
       if (room.participants.length !== 2) throw new RoomServiceError('INVALID_PHASE', 'Wait for your partner to join.');
       room.phase = 'countdown';
-      room.captureTargetAt = now() + 3_500;
+      room.captureTargetAt = now() + COUNTDOWN_MS;
+      // Whoever starts the run drives all four shots. A single controller for the
+      // whole sequence is what stops the two devices racing each other for it.
       room.captureControllerId = participantId;
       touch(room);
       return snapshot(room);
@@ -238,10 +252,21 @@ export function createRoomService(options: RoomServiceOptions = {}) {
     acceptFrame(code: string, participantId: string, frameId: string) {
       const room = getRoom(code);
       getParticipant(room, participantId);
-      room.acceptedFrameIds = [...room.acceptedFrameIds, frameId].slice(0, 4);
-      room.captureTargetAt = undefined;
-      room.captureControllerId = undefined;
-      room.phase = room.acceptedFrameIds.length === 4 ? 'review' : 'ready';
+      room.acceptedFrameIds = [...room.acceptedFrameIds, frameId].slice(0, TOTAL_FRAMES);
+
+      if (room.acceptedFrameIds.length >= TOTAL_FRAMES) {
+        // Strip is full. Go straight to 'complete' so both clients hand off into
+        // the editor without anyone pressing a finish button.
+        room.phase = 'complete';
+        room.captureTargetAt = undefined;
+        room.captureControllerId = undefined;
+      } else {
+        // Keep the run going: a beat to see the frame just taken, then the next
+        // countdown. Driven from here so both devices count off the same clock.
+        room.phase = 'countdown';
+        room.captureTargetAt = now() + REVIEW_PAUSE_MS + COUNTDOWN_MS;
+      }
+
       touch(room);
       return snapshot(room);
     },
@@ -253,7 +278,11 @@ export function createRoomService(options: RoomServiceOptions = {}) {
         throw new RoomServiceError('INVALID_PHASE', 'That frame is not available to retake.');
       }
       room.acceptedFrameIds.splice(index, 1);
+      // A retake halts the automatic run so the next countdown does not fire at
+      // someone who is busy deciding. Starting again resumes from the gap.
       room.phase = 'ready';
+      room.captureTargetAt = undefined;
+      room.captureControllerId = undefined;
       touch(room);
       return snapshot(room);
     },

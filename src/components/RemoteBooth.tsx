@@ -12,10 +12,19 @@ import type {
   SharedRoomConfig
 } from '../remote/types';
 import { shouldAnnounceReady } from '../remote/negotiation';
+import { useLiveBackground } from '../remote/useLiveBackground';
 import { isCountdownStale } from '../remote/countdown';
 import { BackgroundPicker } from './BackgroundPicker';
+import { CountdownOverlay } from './CountdownOverlay';
 import { RoomEntry } from './RoomEntry';
 import { optimiseSharedBackground } from '../utils/photoImport';
+
+/** How long the copy button holds its confirmed state before reverting. */
+const COPIED_FEEDBACK_MS = 2_000;
+/** Frames in a finished strip. Mirrors TOTAL_FRAMES on the room service. */
+const TOTAL_FRAMES = 4;
+/** Highest number the countdown overlay ever shows. */
+const COUNTDOWN_SECONDS = 5;
 
 interface RemoteBoothProps {
   onComplete: (photos: PhotoItem[], config: StripConfiguration) => void;
@@ -63,10 +72,42 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
     const timer = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(timer);
   }, [phase, targetAt]);
+  // Both feeds preview the shared background, so what you see is what gets saved.
+  const localBackground = useLiveBackground(localVideoRef, shared.background);
+  const remoteBackground = useLiveBackground(remoteVideoRef, shared.background);
+  const backgroundFallback = localBackground.fallbackReason ?? remoteBackground.fallbackReason;
+
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const copyResetRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+  }, []);
+
+  const handleCopyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(`${location.origin}${location.pathname}?room=${code}`);
+    } catch {
+      // Clipboard unavailable or permission denied. Say nothing rather than
+      // confirming a copy that did not happen.
+      return;
+    }
+    setCopiedInvite(true);
+    if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+    copyResetRef.current = window.setTimeout(() => setCopiedInvite(false), COPIED_FEEDBACK_MS);
+  };
+
   const staleCountdown = isCountdownStale({ phase, captureTargetAt: targetAt, now });
+  // An automatic run is in progress. Restarting mid-run would reset the sequence,
+  // so the control reports progress instead of inviting another press.
+  const running = phase === 'countdown' && !staleCountdown;
   // Hide the overlay for a countdown that never produced a frame, so the booth
-  // does not sit behind a frozen 📸.
-  const remaining = targetAt && !staleCountdown ? Math.max(0, Math.ceil((targetAt - now) / 1000)) : null;
+  // does not sit behind a frozen 📸. The number is clamped because the gap
+  // between shots is longer than the countdown itself -- the pause should not
+  // show up as "6".
+  const remaining =
+    targetAt && !staleCountdown
+      ? Math.min(COUNTDOWN_SECONDS, Math.max(0, Math.ceil((targetAt - now) / 1000)))
+      : null;
   const partner = participants.find((participant) => participant.id !== selfId);
   const ready = participants.length === 2 && participants.every((participant) => participant.connection === 'connected');
 
@@ -78,29 +119,66 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
           <div className="font-mono text-xl font-black tracking-[.22em]">{code}</div>
         </div>
         <button
-          onClick={() => navigator.clipboard?.writeText(`${location.origin}${location.pathname}?room=${code}`)}
-          className="flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 text-xs font-bold"
+          onClick={handleCopyInvite}
+          aria-live="polite"
+          className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors duration-200 ${
+            copiedInvite
+              ? 'border-[#2D2D2D] bg-[#2D2D2D] text-white'
+              : 'border-[#E8E6DF] bg-white text-[#2D2D2D]'
+          }`}
         >
-          <Copy className="h-3.5 w-3.5" /> Copy invite
+          {copiedInvite ? (
+            <>
+              <Check className="h-3.5 w-3.5" /> Copied invite
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5" /> Copy invite
+            </>
+          )}
         </button>
       </div>
 
       <div data-testid="remote-feed-grid" className="relative grid grid-cols-2 overflow-hidden rounded-2xl bg-[#222] aspect-[4/3]">
         <div className="relative min-w-0 overflow-hidden border-r border-white/30">
-          <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover -scale-x-100" />
+          {/* The video stays mounted as the segmentation source; the canvas covers
+              it while a background is applied. */}
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`h-full w-full object-cover -scale-x-100 ${localBackground.active ? 'invisible' : ''}`}
+          />
+          {/* Always mounted: the effect that activates it needs the element to
+              already exist. Visibility, not mounting, is what toggles. */}
+          <canvas
+            ref={localBackground.canvasRef}
+            className={`absolute inset-0 h-full w-full object-cover -scale-x-100 ${localBackground.active ? '' : 'hidden'}`}
+          />
           <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white">You</span>
+          {localBackground.preparing && (
+            <span className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white">
+              Preparing background…
+            </span>
+          )}
         </div>
         <div className="relative min-w-0 overflow-hidden">
-          <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className={`h-full w-full object-cover ${remoteBackground.active ? 'invisible' : ''}`}
+          />
+          <canvas
+            ref={remoteBackground.canvasRef}
+            className={`absolute inset-0 h-full w-full object-cover ${remoteBackground.active ? '' : 'hidden'}`}
+          />
           <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white">
             {partner?.name ?? 'Waiting…'}
           </span>
         </div>
-        {remaining !== null && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/45 text-7xl font-black text-white">
-            {remaining || '📸'}
-          </div>
-        )}
+        <CountdownOverlay value={remaining} />
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-[#666]">
@@ -109,9 +187,11 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
       </div>
 
       <BackgroundPicker value={shared.background} onChange={onBackgroundChange} onUpload={onBackgroundUpload} />
-      {shared.background.mode !== 'original' && (
-        <p className="rounded-xl bg-[#F4FFFD] px-3 py-2 text-[10px] font-semibold text-[#187E77]">
-          Background removal is applied to the saved side-by-side photo on both devices.
+      {backgroundFallback && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
+          {backgroundFallback === 'too-slow'
+            ? 'This device cannot preview the background smoothly, so the live view stays as-is. Your saved photos still get it.'
+            : 'Live background preview is unavailable on this browser. Your saved photos still get it.'}
         </p>
       )}
 
@@ -130,23 +210,24 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
       </div>
 
       <div className="flex gap-2">
-        {frameUrls.length < 4 ? (
-          <button
-            onClick={onCapture}
-            disabled={!ready || (phase === 'countdown' && !staleCountdown)}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-3 text-sm font-black text-white disabled:opacity-40"
-          >
-            <Camera className="h-4 w-4" /> Take photo {frameUrls.length + 1}/4
-          </button>
-        ) : (
-          <button
-            onClick={onFinish}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#2D2D2D] px-5 py-3 text-sm font-black text-white"
-          >
-            <Check className="h-4 w-4" /> Finish together
-          </button>
-        )}
+        <button
+          onClick={onCapture}
+          disabled={!ready || running}
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-3 text-sm font-black text-white disabled:opacity-40"
+        >
+          <Camera className="h-4 w-4" />
+          {running
+            ? `Taking photo ${Math.min(frameUrls.length + 1, TOTAL_FRAMES)} of ${TOTAL_FRAMES}…`
+            : frameUrls.length > 0
+              ? `Resume — ${frameUrls.length}/${TOTAL_FRAMES} taken`
+              : `Start photo booth — ${TOTAL_FRAMES} shots`}
+        </button>
       </div>
+      <p className="text-center text-[10px] text-[#777]">
+        {running
+          ? 'Hold still. The booth takes all four on its own.'
+          : `One tap takes ${TOTAL_FRAMES} photos with a countdown before each, then opens the editor.`}
+      </p>
     </div>
   );
 };
@@ -209,10 +290,14 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
   }, [peer.remoteStream]);
   useEffect(() => session.subscribeFrames(({ index, dataUrl }) => {
     setFrameUrls((current) => {
+      // Slot positions are meaningful, so a frame is written at its own index and
+      // holes are closed by splice. The previous filter(Boolean) compacted holes
+      // on every update, which silently shifted frames into the wrong slots when
+      // one arrived out of order.
       const next = [...current];
       if (dataUrl) next[index] = dataUrl;
       else next.splice(index, 1);
-      return next.filter(Boolean).slice(0, 4);
+      return next.slice(0, TOTAL_FRAMES);
     });
   }), [session.subscribeFrames]);
 
@@ -293,6 +378,12 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
     <>
       {cameraError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">{cameraError}</p>}
       {captureError && <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">{captureError}</p>}
+      {/* Room errors were only ever rendered on the entry screen, so a rejected
+          change inside the booth -- a background the server would not take, say --
+          looked like the tap simply did nothing. */}
+      {session.error && (
+        <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">{session.error}</p>
+      )}
       <RemoteBoothView
         code={session.snapshot.code}
         participants={session.snapshot.participants}
