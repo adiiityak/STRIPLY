@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ParticipantRole, SignalPayload } from './types';
+import type { ParticipantRole, RoomPhase, SignalPayload } from './types';
+import { shouldSendOffer } from './negotiation';
+import { createSignalQueue, type SignalTarget } from './signalQueue';
 
 type IceEnvironment = Record<string, string | undefined>;
 
@@ -25,15 +27,24 @@ interface UsePeerVideoOptions {
   role?: ParticipantRole;
   localStream: MediaStream | null;
   enabled: boolean;
+  /**
+   * Room phase. Negotiation waits for it to reach 'ready', which is the room's
+   * signal that both peers have a signal listener attached.
+   */
+  phase: RoomPhase;
   sendSignal: (payload: SignalPayload) => void;
   subscribeSignal: (listener: (payload: SignalPayload) => void) => () => void;
 }
 
-export function usePeerVideo({ role, localStream, enabled, sendSignal, subscribeSignal }: UsePeerVideoOptions) {
+export function usePeerVideo({ role, localStream, enabled, phase, sendSignal, subscribeSignal }: UsePeerVideoOptions) {
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionState, setConnectionState] = useState<RTCPeerConnectionState>('new');
   const [generation, setGeneration] = useState(0);
+  // Bumped once a peer exists and its signal listener is attached, so the
+  // offer effect below re-evaluates against a live connection.
+  const [peerEpoch, setPeerEpoch] = useState(0);
+  const offeredEpochRef = useRef<number | null>(null);
 
   const retry = useCallback(() => setGeneration((value) => value + 1), []);
 
@@ -51,32 +62,14 @@ export function usePeerVideo({ role, localStream, enabled, sendSignal, subscribe
       if (event.candidate) sendSignal({ kind: 'ice', data: event.candidate.toJSON() });
     };
 
-    const receive = async (payload: SignalPayload) => {
-      try {
-        if (payload.kind === 'offer') {
-          await peer.setRemoteDescription(payload.data as RTCSessionDescriptionInit);
-          const answer = await peer.createAnswer();
-          await peer.setLocalDescription(answer);
-          sendSignal({ kind: 'answer', data: answer });
-        } else if (payload.kind === 'answer') {
-          await peer.setRemoteDescription(payload.data as RTCSessionDescriptionInit);
-        } else {
-          await peer.addIceCandidate(payload.data as RTCIceCandidateInit);
-        }
-      } catch (error) {
-        console.error('WebRTC signaling error:', error);
-        setConnectionState('failed');
-      }
-    };
+    const receive = createSignalQueue(peer as unknown as SignalTarget, sendSignal, (error) => {
+      console.error('WebRTC signaling error:', error);
+      setConnectionState('failed');
+    });
     const unsubscribe = subscribeSignal(receive);
-
-    if (role === 'creator') {
-      void (async () => {
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        sendSignal({ kind: 'offer', data: offer });
-      })();
-    }
+    // Only now is this peer able to handle an incoming offer. Announcing
+    // readiness before this point is what lost the handshake.
+    setPeerEpoch((value) => value + 1);
 
     return () => {
       unsubscribe();
@@ -88,5 +81,34 @@ export function usePeerVideo({ role, localStream, enabled, sendSignal, subscribe
     };
   }, [enabled, generation, localStream, role, sendSignal, subscribeSignal]);
 
-  return { remoteStream, connectionState, retry };
+  // Kept out of the effect above so that a phase change never tears down and
+  // rebuilds a working peer connection.
+  useEffect(() => {
+    const peer = peerRef.current;
+    if (
+      !peer ||
+      !shouldSendOffer({
+        role,
+        phase,
+        hasPeer: true,
+        alreadyOffered: offeredEpochRef.current === peerEpoch
+      })
+    ) return;
+
+    offeredEpochRef.current = peerEpoch;
+    void (async () => {
+      try {
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
+        sendSignal({ kind: 'offer', data: offer });
+      } catch (error) {
+        console.error('WebRTC offer failed:', error);
+        // Allow a later attempt for this same peer rather than wedging silently.
+        offeredEpochRef.current = null;
+        setConnectionState('failed');
+      }
+    })();
+  }, [peerEpoch, phase, role, sendSignal]);
+
+  return { remoteStream, connectionState, retry, isListeningForSignals: peerEpoch > 0 };
 }
