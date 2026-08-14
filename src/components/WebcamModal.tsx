@@ -4,6 +4,9 @@ import { constrainImageDimensions } from '../utils/exportUtils';
 import type { PhotoItem, StripConfiguration } from '../types';
 import { RemoteBooth } from './RemoteBooth';
 import { CountdownOverlay } from './CountdownOverlay';
+import { BackgroundPicker } from './BackgroundPicker';
+import { useLiveBackground } from '../remote/useLiveBackground';
+import type { SharedBackground } from '../remote/types';
 
 const MAX_CAPTURE_DIMENSION = 1280;
 
@@ -33,6 +36,8 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [flash, setFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [background, setBackground] = useState<SharedBackground>({ mode: 'original' });
+  const liveBackground = useLiveBackground(videoRef, background, boothMode === 'solo');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -98,7 +103,12 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
     // Flip horizontally for natural mirror feel
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
-    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    // When a background is previewing live, shoot the composite that is actually
+    // on screen so the saved photo matches what was framed.
+    const source = liveBackground.active && liveBackground.canvasRef.current
+      ? liveBackground.canvasRef.current
+      : videoRef.current;
+    ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
 
     // A bounded JPEG keeps a multi-shot strip below mobile Safari's SVG/data-URL limits when
     // html-to-image embeds every frame into the exported PNG, PDF, or share attachment.
@@ -225,13 +235,23 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
               </div>
             </div>
           ) : (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover -scale-x-100"
-            />
+            <>
+              {/* The video stays mounted as the segmentation source; the canvas
+                  covers it while a background is applied. */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover -scale-x-100 ${liveBackground.active ? 'invisible' : ''}`}
+              />
+              {/* Always mounted: the effect that activates it needs the element
+                  to already exist. Visibility, not mounting, is what toggles. */}
+              <canvas
+                ref={liveBackground.canvasRef}
+                className={`absolute inset-0 w-full h-full object-cover -scale-x-100 ${liveBackground.active ? '' : 'hidden'}`}
+              />
+            </>
           )}
 
           {/* Flash Effect */}
@@ -246,6 +266,20 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
             <span>Target: {targetCount} photos</span>
           </div>
         </div>
+
+        {/* Background */}
+        {stream && (
+          <div className="mt-4">
+            <BackgroundPicker value={background} onChange={setBackground} />
+            {liveBackground.fallbackReason && (
+              <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                {liveBackground.fallbackReason === 'too-slow'
+                  ? 'This device cannot preview the background smoothly, so the live view stays as-is.'
+                  : 'Live background preview is unavailable on this browser.'}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Target Count Selectors & Controls */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">

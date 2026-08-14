@@ -12,6 +12,7 @@ import type {
   SharedRoomConfig
 } from '../remote/types';
 import { shouldAnnounceReady } from '../remote/negotiation';
+import { useLiveBackground } from '../remote/useLiveBackground';
 import { isCountdownStale } from '../remote/countdown';
 import { BackgroundPicker } from './BackgroundPicker';
 import { CountdownOverlay } from './CountdownOverlay';
@@ -71,6 +72,11 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
     const timer = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(timer);
   }, [phase, targetAt]);
+  // Both feeds preview the shared background, so what you see is what gets saved.
+  const localBackground = useLiveBackground(localVideoRef, shared.background);
+  const remoteBackground = useLiveBackground(remoteVideoRef, shared.background);
+  const backgroundFallback = localBackground.fallbackReason ?? remoteBackground.fallbackReason;
+
   const [copiedInvite, setCopiedInvite] = useState(false);
   const copyResetRef = useRef<number | null>(null);
   useEffect(() => () => {
@@ -135,11 +141,39 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
 
       <div data-testid="remote-feed-grid" className="relative grid grid-cols-2 overflow-hidden rounded-2xl bg-[#222] aspect-[4/3]">
         <div className="relative min-w-0 overflow-hidden border-r border-white/30">
-          <video ref={localVideoRef} autoPlay playsInline muted className="h-full w-full object-cover -scale-x-100" />
+          {/* The video stays mounted as the segmentation source; the canvas covers
+              it while a background is applied. */}
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`h-full w-full object-cover -scale-x-100 ${localBackground.active ? 'invisible' : ''}`}
+          />
+          {/* Always mounted: the effect that activates it needs the element to
+              already exist. Visibility, not mounting, is what toggles. */}
+          <canvas
+            ref={localBackground.canvasRef}
+            className={`absolute inset-0 h-full w-full object-cover -scale-x-100 ${localBackground.active ? '' : 'hidden'}`}
+          />
           <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white">You</span>
+          {localBackground.preparing && (
+            <span className="absolute top-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white">
+              Preparing background…
+            </span>
+          )}
         </div>
         <div className="relative min-w-0 overflow-hidden">
-          <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full object-cover" />
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            className={`h-full w-full object-cover ${remoteBackground.active ? 'invisible' : ''}`}
+          />
+          <canvas
+            ref={remoteBackground.canvasRef}
+            className={`absolute inset-0 h-full w-full object-cover ${remoteBackground.active ? '' : 'hidden'}`}
+          />
           <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-white">
             {partner?.name ?? 'Waiting…'}
           </span>
@@ -153,9 +187,11 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
       </div>
 
       <BackgroundPicker value={shared.background} onChange={onBackgroundChange} onUpload={onBackgroundUpload} />
-      {shared.background.mode !== 'original' && (
-        <p className="rounded-xl bg-[#F4FFFD] px-3 py-2 text-[10px] font-semibold text-[#187E77]">
-          Background removal is applied to the saved side-by-side photo on both devices.
+      {backgroundFallback && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
+          {backgroundFallback === 'too-slow'
+            ? 'This device cannot preview the background smoothly, so the live view stays as-is. Your saved photos still get it.'
+            : 'Live background preview is unavailable on this browser. Your saved photos still get it.'}
         </p>
       )}
 
@@ -342,6 +378,12 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
     <>
       {cameraError && <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">{cameraError}</p>}
       {captureError && <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">{captureError}</p>}
+      {/* Room errors were only ever rendered on the entry screen, so a rejected
+          change inside the booth -- a background the server would not take, say --
+          looked like the tap simply did nothing. */}
+      {session.error && (
+        <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-xs text-red-700">{session.error}</p>
+      )}
       <RemoteBoothView
         code={session.snapshot.code}
         participants={session.snapshot.participants}
