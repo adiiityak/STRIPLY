@@ -1,6 +1,6 @@
 import React from 'react';
 import { PhotoItem } from '../types';
-import { X, RotateCw, ZoomIn, Move, Trash2, Check, Sparkles } from 'lucide-react';
+import { X, RotateCw, ZoomIn, MoveHorizontal, MoveVertical, Trash2, Check, Sparkles } from 'lucide-react';
 
 interface PhotoEditModalProps {
   photo: PhotoItem | null;
@@ -90,23 +90,62 @@ export const PhotoEditModal: React.FC<PhotoEditModalProps> = ({
             />
           </div>
 
+          {/* Focal Position X (Left - Right) */}
+          <div>
+            <div className="flex justify-between text-[#666666] font-semibold mb-1">
+              <span className="flex items-center gap-1">
+                <MoveHorizontal className="w-3.5 h-3.5 text-[#FF6B6B]" /> Move left / right
+              </span>
+              <span className="text-[#2D2D2D]">{cropX}%</span>
+            </div>
+            <input
+              type="range"
+              aria-label="Move left or right"
+              min="0"
+              max="100"
+              value={cropX}
+              onChange={(e) => setCropX(parseInt(e.target.value))}
+              className="w-full accent-[#FF6B6B] bg-[#E8E6DF] rounded-lg cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-[#999]">
+              <span>Left</span>
+              <span>Right</span>
+            </div>
+          </div>
+
           {/* Focal Position Y (Top - Bottom) */}
           <div>
             <div className="flex justify-between text-[#666666] font-semibold mb-1">
               <span className="flex items-center gap-1">
-                <Move className="w-3.5 h-3.5 text-[#FF6B6B]" /> Vertical Focus (Face Center)
+                <MoveVertical className="w-3.5 h-3.5 text-[#FF6B6B]" /> Move up / down
               </span>
               <span className="text-[#2D2D2D]">{cropY}%</span>
             </div>
             <input
               type="range"
+              aria-label="Move up or down"
               min="0"
               max="100"
               value={cropY}
               onChange={(e) => setCropY(parseInt(e.target.value))}
               className="w-full accent-[#FF6B6B] bg-[#E8E6DF] rounded-lg cursor-pointer"
             />
+            <div className="flex justify-between text-[10px] text-[#999]">
+              <span>Top</span>
+              <span>Bottom</span>
+            </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCropX(50);
+              setCropY(50);
+            }}
+            className="text-[11px] font-semibold text-[#FF6B6B] underline underline-offset-2"
+          >
+            Recentre photo
+          </button>
 
           {/* Rotation Buttons */}
           <div className="flex items-center justify-between pt-1">
