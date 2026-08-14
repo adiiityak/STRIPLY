@@ -17,6 +17,9 @@ import { BackgroundPicker } from './BackgroundPicker';
 import { RoomEntry } from './RoomEntry';
 import { optimiseSharedBackground } from '../utils/photoImport';
 
+/** How long the copy button holds its confirmed state before reverting. */
+const COPIED_FEEDBACK_MS = 2_000;
+
 interface RemoteBoothProps {
   onComplete: (photos: PhotoItem[], config: StripConfiguration) => void;
   entryMode?: 'create' | 'join';
@@ -63,6 +66,25 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
     const timer = window.setInterval(() => setNow(Date.now()), 100);
     return () => window.clearInterval(timer);
   }, [phase, targetAt]);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+  const copyResetRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+  }, []);
+
+  const handleCopyInvite = async () => {
+    try {
+      await navigator.clipboard.writeText(`${location.origin}${location.pathname}?room=${code}`);
+    } catch {
+      // Clipboard unavailable or permission denied. Say nothing rather than
+      // confirming a copy that did not happen.
+      return;
+    }
+    setCopiedInvite(true);
+    if (copyResetRef.current) window.clearTimeout(copyResetRef.current);
+    copyResetRef.current = window.setTimeout(() => setCopiedInvite(false), COPIED_FEEDBACK_MS);
+  };
+
   const staleCountdown = isCountdownStale({ phase, captureTargetAt: targetAt, now });
   // Hide the overlay for a countdown that never produced a frame, so the booth
   // does not sit behind a frozen 📸.
@@ -78,10 +100,23 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
           <div className="font-mono text-xl font-black tracking-[.22em]">{code}</div>
         </div>
         <button
-          onClick={() => navigator.clipboard?.writeText(`${location.origin}${location.pathname}?room=${code}`)}
-          className="flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 text-xs font-bold"
+          onClick={handleCopyInvite}
+          aria-live="polite"
+          className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors duration-200 ${
+            copiedInvite
+              ? 'border-[#2D2D2D] bg-[#2D2D2D] text-white'
+              : 'border-[#E8E6DF] bg-white text-[#2D2D2D]'
+          }`}
         >
-          <Copy className="h-3.5 w-3.5" /> Copy invite
+          {copiedInvite ? (
+            <>
+              <Check className="h-3.5 w-3.5" /> Copied invite
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5" /> Copy invite
+            </>
+          )}
         </button>
       </div>
 

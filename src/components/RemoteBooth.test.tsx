@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RemoteBoothView } from './RemoteBooth';
 
 const shared = {
@@ -55,5 +55,90 @@ describe('RemoteBoothView', () => {
       />
     );
     expect(screen.getByTestId('remote-feed-grid').children).toHaveLength(2);
+  });
+
+  describe('copy invite button', () => {
+    const participants = [
+      { id: 'creator', name: 'Maya', role: 'creator' as const, ready: true, connection: 'connected' as const },
+      { id: 'guest', name: 'Noah', role: 'guest' as const, ready: true, connection: 'connected' as const }
+    ];
+
+    const renderView = () =>
+      render(
+        <RemoteBoothView
+          code="ABC234"
+          participants={participants}
+          selfId="creator"
+          shared={shared}
+          phase="ready"
+          frameUrls={[]}
+          onCapture={vi.fn()}
+          onFinish={vi.fn()}
+          onRetake={vi.fn()}
+          onBackgroundChange={vi.fn()}
+          localVideoRef={{ current: null }}
+          remoteVideoRef={{ current: null }}
+        />
+      );
+
+    const stubClipboard = (writeText: () => Promise<void>) => {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+        writable: true
+      });
+    };
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('copies the invite link for the room', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      stubClipboard(writeText);
+      renderView();
+
+      fireEvent.click(screen.getByRole('button', { name: /copy invite/i }));
+
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?room=ABC234')));
+    });
+
+    it('confirms the copy, then returns to its normal label', async () => {
+      // Fake timers must be installed before the click so the revert timeout is
+      // scheduled against them.
+      vi.useFakeTimers();
+      stubClipboard(vi.fn().mockResolvedValue(undefined));
+      renderView();
+
+      fireEvent.click(screen.getByRole('button', { name: /copy invite/i }));
+      // Settle the clipboard promise; microtasks are not driven by fake timers.
+      await act(async () => {});
+
+      const confirmed = screen.getByRole('button', { name: /copied invite/i });
+      // The confirmed state is the dark treatment, not just a new label.
+      expect(confirmed.className).toContain('bg-[#2D2D2D]');
+      expect(confirmed.className).toContain('text-white');
+
+      act(() => {
+        vi.advanceTimersByTime(2_000);
+      });
+
+      const reverted = screen.getByRole('button', { name: /^copy invite$/i });
+      expect(reverted.className).toContain('bg-white');
+      expect(reverted.className).not.toContain('bg-[#2D2D2D]');
+    });
+
+    // Confirming a copy that never happened would be a lie the user acts on.
+    it('stays in its normal state when the clipboard rejects', async () => {
+      stubClipboard(vi.fn().mockRejectedValue(new Error('denied')));
+      renderView();
+
+      fireEvent.click(screen.getByRole('button', { name: /copy invite/i }));
+
+      await waitFor(() =>
+        expect(screen.queryByRole('button', { name: /copied invite/i })).not.toBeInTheDocument()
+      );
+      expect(screen.getByRole('button', { name: /^copy invite$/i })).toBeInTheDocument();
+    });
   });
 });
