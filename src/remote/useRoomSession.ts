@@ -31,6 +31,7 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
   const [error, setError] = useState<string | null>(null);
   const signalListeners = useRef(new Set<(payload: SignalPayload) => void>());
   const frameListeners = useRef(new Set<(payload: { index: number; dataUrl?: string }) => void>());
+  const attemptedReconnect = useRef(false);
 
   const accept = useCallback((incoming: RoomSnapshot) => {
     if (!shouldAcceptRoomSnapshot(snapshotRef.current, incoming)) return;
@@ -125,9 +126,11 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
       return Promise.resolve(false);
     }
     return new Promise<boolean>((resolve) => {
+      setStatus('connecting');
       socket.emit('room:reconnect', stored, (result) => {
         if (!result.ok || !result.data) {
           sessionStorage.removeItem(STORAGE_KEY);
+          setStatus('idle');
           resolve(false);
           return;
         }
@@ -138,6 +141,12 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
       });
     });
   }, [accept, socket]);
+
+  useEffect(() => {
+    if (attemptedReconnect.current) return;
+    attemptedReconnect.current = true;
+    void reconnect();
+  }, [reconnect]);
 
   const createRoom = useCallback((name: string) => enter('room:create', { name }), [enter]);
   const joinRoom = useCallback((code: string, name: string) => enter('room:join', { code, name }), [enter]);

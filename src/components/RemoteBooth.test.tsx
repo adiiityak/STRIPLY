@@ -10,6 +10,30 @@ const shared = {
 };
 
 describe('RemoteBoothView', () => {
+  it('counts only currently connected participants', () => {
+    render(
+      <RemoteBoothView
+        code="ABC234"
+        participants={[
+          { id: 'a', name: 'Maya', role: 'creator', ready: false, connection: 'connected' },
+          { id: 'b', name: 'Noah', role: 'guest', ready: false, connection: 'disconnected' }
+        ]}
+        selfId="a"
+        shared={shared}
+        phase="lobby"
+        frameUrls={[]}
+        onCapture={vi.fn()}
+        onFinish={vi.fn()}
+        onRetake={vi.fn()}
+        onBackgroundChange={vi.fn()}
+        localVideoRef={{ current: null }}
+        remoteVideoRef={{ current: null }}
+      />
+    );
+
+    expect(screen.getByText('1/2 joined')).toBeInTheDocument();
+  });
+
   it('offers the guest the same one-tap start as the creator', () => {
     render(
       <RemoteBoothView

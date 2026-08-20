@@ -110,6 +110,7 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
       ? Math.min(COUNTDOWN_SECONDS, Math.max(0, Math.ceil((targetAt - now) / 1000)))
       : null;
   const partner = participants.find((participant) => participant.id !== selfId);
+  const connectedParticipantCount = participants.filter((participant) => participant.connection === 'connected').length;
   const ready = participants.length === 2 && participants.every((participant) => participant.connection === 'connected');
 
   return (
@@ -183,7 +184,7 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
       </div>
 
       <div className="flex items-center justify-between text-[11px] text-[#666]">
-        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {participants.length}/2 joined</span>
+        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {connectedParticipantCount}/2 joined</span>
         <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5" /> {connectionState}</span>
       </div>
 

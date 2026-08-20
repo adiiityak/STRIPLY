@@ -1,5 +1,20 @@
-import { describe, expect, it } from 'vitest';
-import { backgroundImageUrl } from './useLiveBackground';
+import { createElement, Fragment, useRef } from 'react';
+import { act, render } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { backgroundImageUrl, useLiveBackground } from './useLiveBackground';
+import { startLiveBackground } from './liveBackground';
+import type { SharedBackground } from './types';
+
+const stop = vi.fn();
+const updateBackground = vi.fn();
+
+vi.mock('./liveBackground', () => ({
+  startLiveBackground: vi.fn(() => ({ stop, updateBackground }))
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('backgroundImageUrl', () => {
   it('uses the chosen preset image', () => {
@@ -22,5 +37,31 @@ describe('backgroundImageUrl', () => {
 
   it('has no image for an untouched feed', () => {
     expect(backgroundImageUrl({ mode: 'original' })).toBeNull();
+  });
+});
+
+describe('useLiveBackground', () => {
+  it('switches the image without restarting the segmentation pipeline', () => {
+    const Harness = ({ value }: { value: SharedBackground }) => {
+      const video = useRef<HTMLVideoElement>(null);
+      const live = useLiveBackground(video, value);
+      return createElement(
+        Fragment,
+        null,
+        createElement('video', { ref: video }),
+        createElement('canvas', { ref: live.canvasRef })
+      );
+    };
+    const { rerender } = render(
+      createElement(Harness, { value: { mode: 'preset', value: '/pattern-backgrounds/pink-heart-tunnel.png' } })
+    );
+
+    act(() => {
+      rerender(createElement(Harness, { value: { mode: 'preset', value: '/pattern-backgrounds/blue-heart-tunnel.png' } }));
+    });
+
+    expect(startLiveBackground).toHaveBeenCalledTimes(1);
+    expect(updateBackground).toHaveBeenLastCalledWith('/pattern-backgrounds/blue-heart-tunnel.png');
+    expect(stop).not.toHaveBeenCalled();
   });
 });

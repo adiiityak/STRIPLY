@@ -187,15 +187,23 @@ export function attachRoomSocketServer(
       socket.to(channel(socket.data.roomCode)).emit('capture:removed', payload);
     });
 
-    const leave = () => {
+    const disconnect = () => {
       if (!socket.data.roomCode || !socket.data.participantId) return;
       const code = socket.data.roomCode;
       const snapshot = roomService.disconnect(code, socket.data.participantId);
       if (snapshot) broadcast(code, snapshot);
     };
 
-    socket.on('room:leave', leave);
-    socket.on('disconnect', leave);
+    socket.on('room:leave', () => {
+      if (!socket.data.roomCode || !socket.data.participantId) return;
+      const code = socket.data.roomCode;
+      const snapshot = roomService.leave(code, socket.data.participantId);
+      socket.leave(channel(code));
+      socket.data.roomCode = undefined;
+      socket.data.participantId = undefined;
+      broadcast(code, snapshot);
+    });
+    socket.on('disconnect', disconnect);
   });
 
   return io;

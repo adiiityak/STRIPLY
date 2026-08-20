@@ -60,14 +60,21 @@ async function getVideoSegmenter() {
   return segmenterPromise;
 }
 
+const imageCache = new Map<string, Promise<HTMLImageElement>>();
+
 function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+  const cached = imageCache.get(url);
+  if (cached) return cached;
+  const pending = new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('Unable to load the background image.'));
     image.src = url;
   });
+  imageCache.set(url, pending);
+  void pending.catch(() => imageCache.delete(url));
+  return pending;
 }
 
 /** Draws a source cropped to fill the target box, preserving aspect ratio. */
@@ -196,6 +203,10 @@ function renderSource(segmenter: MediaPipeImageSegmenter, source: Source) {
   const timestamp = nextSegmentationTimestamp();
 
   segmenter.segmentForVideo(frameCanvas, timestamp, (result) => {
+    if (!sources.has(source)) {
+      result.close();
+      return;
+    }
     const mask = result.categoryMask;
     if (!mask) {
       result.close();
@@ -347,18 +358,26 @@ export function startLiveBackground(options: LiveBackgroundOptions) {
   };
 
   let cancelled = false;
+  let backgroundVersion = 0;
+
+  const updateBackground = async (nextUrl: string | null) => {
+    const version = ++backgroundVersion;
+    let image: HTMLImageElement | null = null;
+    try {
+      if (nextUrl) image = await loadImage(nextUrl);
+    } catch {
+      image = null;
+    }
+    if (cancelled || version !== backgroundVersion) return;
+    source.backgroundImage = image;
+  };
+
+  const initialBackground = updateBackground(backgroundUrl);
 
   void (async () => {
-    try {
-      if (backgroundUrl) source.backgroundImage = await loadImage(backgroundUrl);
-    } catch {
-      // A missing image is not fatal; fall through to the plain backdrop.
-      source.backgroundImage = null;
-    }
-
     let segmenter: MediaPipeImageSegmenter;
     try {
-      segmenter = await getVideoSegmenter();
+      [segmenter] = await Promise.all([getVideoSegmenter(), initialBackground]);
     } catch {
       if (!cancelled) options.onInactive?.('unsupported');
       return;
@@ -374,6 +393,7 @@ export function startLiveBackground(options: LiveBackgroundOptions) {
   })();
 
   return {
+    updateBackground,
     stop: () => {
       cancelled = true;
       stopSource(source);
@@ -395,4 +415,5 @@ export function resetLiveBackgroundForTests() {
   framesRun = 0;
   cursor = 0;
   activeSegmenter = null;
+  imageCache.clear();
 }

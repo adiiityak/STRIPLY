@@ -37,6 +37,42 @@ const snapshot = (revision: number): RoomSnapshot => ({
 });
 
 describe('useRoomSession', () => {
+  it('automatically reclaims the stored room seat after a refresh', async () => {
+    const socket = new FakeSocket();
+    sessionStorage.setItem('striply-remote-room', JSON.stringify({ code: 'ABC234', reconnectToken: 'token-1' }));
+    socket.emit.mockImplementation((event: string, payload: any, ack: (result: any) => void) => {
+      if (event !== 'room:reconnect') return;
+      ack({
+        ok: true,
+        data: {
+          identity: {
+            participant: { id: 'guest-1', name: 'Maya', role: 'guest', ready: false, connection: 'connected' },
+            reconnectToken: payload.reconnectToken
+          },
+          snapshot: {
+            ...snapshot(0),
+            participants: [
+              { id: 'creator-1', name: 'Adk', role: 'creator', ready: false, connection: 'connected' },
+              { id: 'guest-1', name: 'Maya', role: 'guest', ready: false, connection: 'connected' }
+            ]
+          }
+        }
+      });
+    });
+
+    const { result } = renderHook(() => useRoomSession({ socket: socket as any }));
+    await act(async () => {});
+
+    expect(socket.emit).toHaveBeenCalledWith(
+      'room:reconnect',
+      { code: 'ABC234', reconnectToken: 'token-1' },
+      expect.any(Function)
+    );
+    expect(result.current.status).toBe('joined');
+    expect(result.current.self?.participant.id).toBe('guest-1');
+    sessionStorage.clear();
+  });
+
   it('stops waiting and shows an error when the room server never acknowledges creation', async () => {
     vi.useFakeTimers();
     const socket = new FakeSocket();

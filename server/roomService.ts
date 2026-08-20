@@ -179,12 +179,10 @@ export function createRoomService(options: RoomServiceOptions = {}) {
 
     joinRoom(code: string, name: string) {
       const room = getRoom(code);
-      const active = room.participants.filter(
-        (participant) =>
-          participant.connection !== 'disconnected' ||
-          !participant.disconnectedAt ||
-          now() - participant.disconnectedAt < RECONNECT_GRACE_MS
-      );
+      // A disconnected participant may still reclaim the seat with its private
+      // token, but it must not make the public room look full. If somebody else
+      // joins first, the vacant seat belongs to the new participant.
+      const active = room.participants.filter((participant) => participant.connection !== 'disconnected');
       if (active.length >= 2) throw new RoomServiceError('ROOM_FULL', 'This room already has two people.');
       room.participants = active;
       const guest = createParticipant(name, 'guest');
@@ -305,6 +303,19 @@ export function createRoomService(options: RoomServiceOptions = {}) {
       if (!participant) return snapshot(room);
       participant.connection = 'disconnected';
       participant.disconnectedAt = now();
+      return snapshot(room);
+    },
+
+    leave(code: string, participantId: string) {
+      const room = getRoom(code);
+      getParticipant(room, participantId);
+      room.participants = room.participants.filter((participant) => participant.id !== participantId);
+      if (room.participants.length < 2 && room.phase !== 'complete') {
+        room.phase = 'lobby';
+        room.captureTargetAt = undefined;
+        room.captureControllerId = undefined;
+      }
+      touch(room);
       return snapshot(room);
     },
 

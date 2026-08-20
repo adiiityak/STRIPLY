@@ -63,6 +63,31 @@ describe('room socket server', () => {
     guest.disconnect();
   });
 
+  it('frees the socket room slot when a participant explicitly leaves', async () => {
+    const { connect } = await startSockets();
+    const creator = connect();
+    const guest = connect();
+    const replacement = connect();
+    const created: any = await emitAck(creator, 'room:create', { name: 'Maya' });
+    const afterJoin = new Promise<any>((resolve) => creator.once('room:state', resolve));
+    await emitAck(guest, 'room:join', { code: created.data.snapshot.code, name: 'Noah' });
+    await afterJoin;
+
+    const afterLeave = new Promise<any>((resolve) => creator.once('room:state', resolve));
+    guest.emit('room:leave');
+    await expect(afterLeave).resolves.toMatchObject({ participants: [{ name: 'Maya' }] });
+    const joined: any = await emitAck(replacement, 'room:join', {
+      code: created.data.snapshot.code,
+      name: 'Adk'
+    });
+
+    expect(joined.ok).toBe(true);
+    expect(joined.data.snapshot.participants.map((participant: any) => participant.name)).toEqual(['Maya', 'Adk']);
+    creator.disconnect();
+    guest.disconnect();
+    replacement.disconnect();
+  });
+
   it('relays WebRTC signals only to the other participant', async () => {
     const { connect } = await startSockets();
     const creator = connect();

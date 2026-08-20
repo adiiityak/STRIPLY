@@ -179,4 +179,27 @@ describe('RoomService', () => {
     expect(restored.identity.participant.id).toBe(created.identity.participant.id);
     expect(restored.identity.participant.connection).toBe('connected');
   });
+
+  it('frees a participant slot immediately when someone explicitly leaves', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+    const guest = service.joinRoom(creator.snapshot.code, 'Noah');
+
+    const afterLeave = service.leave(creator.snapshot.code, guest.identity.participant.id);
+    const replacement = service.joinRoom(creator.snapshot.code, 'Adk');
+
+    expect(afterLeave.participants).toHaveLength(1);
+    expect(replacement.snapshot.participants.map((participant) => participant.name)).toEqual(['Maya', 'Adk']);
+  });
+
+  it('allows a new join as soon as a disconnected participant leaves a slot', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+    const guest = service.joinRoom(creator.snapshot.code, 'Noah');
+    service.disconnect(creator.snapshot.code, guest.identity.participant.id);
+
+    const replacement = service.joinRoom(creator.snapshot.code, 'Adk');
+
+    expect(replacement.snapshot.participants.map((participant) => participant.name)).toEqual(['Maya', 'Adk']);
+  });
 });

@@ -21,6 +21,8 @@ export function useLiveBackground(
   enabled = true
 ) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const handleRef = useRef<ReturnType<typeof startLiveBackground> | null>(null);
+  const currentUrlRef = useRef<string | null>(null);
   const [running, setRunning] = useState(false);
   const [ready, setReady] = useState(false);
   const [fallbackReason, setFallbackReason] = useState<'unsupported' | 'too-slow' | null>(null);
@@ -53,8 +55,19 @@ export function useLiveBackground(
         setFallbackReason(reason);
       }
     });
-    return () => handle.stop();
-  }, [wanted, url, video]);
+    handleRef.current = handle;
+    currentUrlRef.current = url;
+    return () => {
+      handle.stop();
+      handleRef.current = null;
+    };
+  }, [wanted, video]);
+
+  useEffect(() => {
+    if (!wanted || currentUrlRef.current === url) return;
+    currentUrlRef.current = url;
+    void handleRef.current?.updateBackground(url);
+  }, [wanted, url]);
 
   return {
     canvasRef,
