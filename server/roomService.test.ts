@@ -202,4 +202,41 @@ describe('RoomService', () => {
 
     expect(replacement.snapshot.participants.map((participant) => participant.name)).toEqual(['Maya', 'Adk']);
   });
+
+  it('keeps a room joinable while at least one participant is connected', () => {
+    let currentTime = 1_000;
+    const service = createRoomService({ now: () => currentTime });
+    const creator = service.createRoom('Maya');
+
+    // A connected creator may wait longer than the normal idle TTL for their
+    // partner. Their invitation must still remain valid.
+    currentTime += 31 * 60 * 1_000;
+    const guest = service.joinRoom(creator.snapshot.code, 'Noah');
+
+    expect(guest.snapshot.participants.map((participant) => participant.name)).toEqual(['Maya', 'Noah']);
+  });
+
+  it('ends the room immediately when its last participant explicitly leaves', () => {
+    const service = createRoomService({ now: () => 1_000 });
+    const creator = service.createRoom('Maya');
+
+    service.leave(creator.snapshot.code, creator.identity.participant.id);
+
+    expect(() => service.getSnapshot(creator.snapshot.code)).toThrowError(
+      expect.objectContaining({ code: 'ROOM_NOT_FOUND' })
+    );
+  });
+
+  it('keeps an empty disconnected room only for the refresh reconnect grace period', () => {
+    let currentTime = 1_000;
+    const service = createRoomService({ now: () => currentTime });
+    const creator = service.createRoom('Maya');
+    service.disconnect(creator.snapshot.code, creator.identity.participant.id);
+
+    currentTime += 59_000;
+    expect(service.sweepExpired()).toBe(1);
+
+    currentTime += 2_000;
+    expect(service.sweepExpired()).toBe(0);
+  });
 });

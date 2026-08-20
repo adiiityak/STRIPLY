@@ -27,32 +27,25 @@ interface BackgroundPickerProps {
 
 export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onChange, onUpload }) => (
   <div className="min-w-0 space-y-1.5 lg:space-y-2">
-    <div className="flex gap-1.5 overflow-x-auto pb-1 lg:gap-2">
+    <div
+      data-testid="background-primary-actions"
+      className="grid grid-cols-[minmax(0,.8fr)_minmax(0,1.55fr)_minmax(0,.8fr)] gap-1.5 lg:gap-2"
+    >
       <button
         aria-pressed={value.mode === 'original'}
         onClick={() => onChange({ mode: 'original' })}
-        className="min-h-11 shrink-0 rounded-xl border px-2.5 py-2 text-[11px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5] lg:px-3"
+        className="min-h-11 min-w-0 rounded-xl border px-1.5 py-2 text-[10px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5] sm:text-[11px]"
       >
         Original
       </button>
       <button
         aria-pressed={value.mode === 'removed'}
         onClick={() => onChange({ mode: 'removed' })}
-        className="min-h-11 shrink-0 rounded-xl border px-2.5 py-2 text-[11px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5] lg:px-3"
+        className="min-h-11 min-w-0 rounded-xl border px-1.5 py-2 text-[10px] font-bold leading-tight aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5] sm:text-[11px]"
       >
         Remove background
       </button>
-      {PRESETS.map((preset) => (
-        <button
-          key={preset.value}
-          aria-label={preset.name}
-          aria-pressed={value.mode === 'preset' && value.value === preset.value}
-          onClick={() => onChange({ mode: 'preset', value: preset.value })}
-          className="h-11 w-12 shrink-0 overflow-hidden rounded-xl border-2 aria-pressed:border-[#FF6B6B] lg:w-14"
-          style={{ backgroundImage: `url(${preset.value})`, backgroundSize: 'cover' }}
-        />
-      ))}
-      <label className="flex min-h-11 shrink-0 cursor-pointer items-center rounded-xl border px-3 py-2 text-[11px] font-bold">
+      <label className="flex min-h-11 min-w-0 cursor-pointer items-center justify-center rounded-xl border px-1.5 py-2 text-[10px] font-bold sm:text-[11px]">
         Upload
         <input
           className="sr-only"
@@ -61,6 +54,19 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onCha
           onChange={(event) => event.target.files?.[0] && onUpload?.(event.target.files[0])}
         />
       </label>
+    </div>
+
+    <div data-testid="background-preset-grid" className="grid grid-cols-5 gap-1.5 lg:gap-2">
+      {PRESETS.map((preset) => (
+        <button
+          key={preset.value}
+          aria-label={preset.name}
+          aria-pressed={value.mode === 'preset' && value.value === preset.value}
+          onClick={() => onChange({ mode: 'preset', value: preset.value })}
+          className="h-11 min-w-0 overflow-hidden rounded-xl border-2 bg-[#FAF9F6] aria-pressed:border-[#FF6B6B]"
+          style={{ backgroundImage: `url(${preset.value})`, backgroundSize: 'cover' }}
+        />
+      ))}
     </div>
     <p className="hidden text-[10px] text-[#777] lg:block">One shared background. Changes from either person sync instantly.</p>
   </div>

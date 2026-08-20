@@ -84,11 +84,22 @@ export function createRoomService(options: RoomServiceOptions = {}) {
     expiresAt: room.expiresAt
   });
 
+  const hasConnectedParticipant = (room: InternalRoom) =>
+    room.participants.some((participant) => participant.connection === 'connected');
+
   const getRoom = (code: string) => {
     const room = rooms.get(code);
-    if (!room || room.expiresAt <= now()) {
-      if (room) rooms.delete(code);
+    if (!room) {
       throw new RoomServiceError('ROOM_NOT_FOUND', 'This room does not exist or has expired.');
+    }
+    if (room.expiresAt <= now()) {
+      // A live invitation belongs to the connected participant, not to a fixed
+      // timer. Only an empty/disconnected room is eligible for expiry.
+      if (hasConnectedParticipant(room)) room.expiresAt = now() + ROOM_TTL_MS;
+      else {
+        rooms.delete(code);
+        throw new RoomServiceError('ROOM_NOT_FOUND', 'This room does not exist or has expired.');
+      }
     }
     return room;
   };
@@ -303,6 +314,9 @@ export function createRoomService(options: RoomServiceOptions = {}) {
       if (!participant) return snapshot(room);
       participant.connection = 'disconnected';
       participant.disconnectedAt = now();
+      // A dropped socket may simply be a refresh. Preserve an otherwise empty
+      // room just long enough for its private reconnect token to reclaim it.
+      if (!hasConnectedParticipant(room)) room.expiresAt = now() + RECONNECT_GRACE_MS;
       return snapshot(room);
     },
 
@@ -310,6 +324,12 @@ export function createRoomService(options: RoomServiceOptions = {}) {
       const room = getRoom(code);
       getParticipant(room, participantId);
       room.participants = room.participants.filter((participant) => participant.id !== participantId);
+      if (room.participants.length === 0) {
+        room.phase = 'closed';
+        const result = snapshot(room);
+        rooms.delete(code);
+        return result;
+      }
       if (room.participants.length < 2 && room.phase !== 'complete') {
         room.phase = 'lobby';
         room.captureTargetAt = undefined;
@@ -333,7 +353,11 @@ export function createRoomService(options: RoomServiceOptions = {}) {
     },
 
     sweepExpired(at = now()) {
-      for (const [code, room] of rooms) if (room.expiresAt <= at) rooms.delete(code);
+      for (const [code, room] of rooms) {
+        if (room.expiresAt > at) continue;
+        if (hasConnectedParticipant(room)) room.expiresAt = at + ROOM_TTL_MS;
+        else rooms.delete(code);
+      }
       return rooms.size;
     }
   };

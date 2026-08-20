@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 
 vi.mock('html2canvas', () => ({ default: vi.fn() }));
 vi.mock('html-to-image', () => ({ toPng: vi.fn() }));
+vi.mock('canvas-confetti', () => ({ default: vi.fn() }));
 
 type ExportSizingApi = {
   constrainImageDimensions?: (
@@ -118,6 +119,51 @@ describe('export image sizing', () => {
 
   it('allows the native file share sheet on touch-only devices', () => {
     expect(sizing.shouldUseFileShareSheet?.(true)).toBe(true);
+  });
+
+  it('downloads PNG exports directly on touch devices instead of entering the share flow', async () => {
+    const element = document.createElement('div');
+    Object.defineProperty(element, 'clientWidth', { value: 280 });
+    Object.defineProperty(element, 'clientHeight', { value: 980 });
+    const pixels = new Uint8ClampedArray([
+      255, 255, 255, 255,
+      255, 255, 255, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255
+    ]);
+    vi.mocked(html2canvas).mockResolvedValue({
+      width: 2,
+      height: 2,
+      getContext: () => ({ getImageData: () => ({ data: pixels }) }),
+      toDataURL: () => `data:image/png;base64,${'a'.repeat(2_000)}`
+    } as unknown as HTMLCanvasElement);
+
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: vi.fn(() => true)
+    });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share });
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      value: vi.fn(() => ({ matches: true }))
+    });
+    const createObjectURL = vi.fn(() => 'blob:striply-png');
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectURL
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn()
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    await exportUtils.downloadStripAsPNG(element, 'strip.png', { scale: 1 });
+
+    expect(share).not.toHaveBeenCalled();
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it('prepares photo bitmaps at final export resolution without upscaling the source', () => {

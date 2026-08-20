@@ -313,43 +313,10 @@ export async function downloadStripAsPNG(
     const scale = options.scale || 2.5;
 
     const dataUrl = await renderStripToPng(element, scale, options.transparent);
-    const blob = dataUrlToBlob(dataUrl);
-    const file = new File([blob], filename, { type: 'image/png' });
-
-    // The share sheet is the cleanest way to save on a phone, where a plain download is awkward
-    // to find afterwards. On a laptop it is the wrong behaviour: the user expects the file in
-    // Downloads, not a "share to Messages/Notes" dialog.
-    //
-    // `navigator.canShare({ files })` alone does not distinguish the two -- it is true on macOS
-    // Safari and desktop Chrome as well, which is why laptops were getting the share sheet. Gate
-    // it on the pointer type too: a phone or tablet reports a coarse primary pointer and no
-    // hover, a laptop does not.
-    const prefersShareSheet = shouldUseFileShareSheet(
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(pointer: coarse) and (any-hover: none)').matches
-    );
-
-    if (prefersShareSheet && navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: 'Striply Photo Strip'
-        });
-
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.8 }
-        });
-        return true;
-      } catch (shareErr: any) {
-        if (shareErr.name === 'AbortError') {
-          return false;
-        }
-      }
-    }
-
+    // Export is a download action on every device. Calling navigator.share only after the
+    // asynchronous cold render loses mobile browsers' transient user activation and can leave
+    // the share promise (and the Export spinner) pending. Sharing remains available through the
+    // dedicated Share button, whose user gesture occurs after its preview has been prepared.
     saveDataUrl(dataUrl, filename);
 
     // Trigger celebratory confetti!
