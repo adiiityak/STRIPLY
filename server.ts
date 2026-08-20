@@ -5,6 +5,10 @@ import { GoogleGenAI } from '@google/genai';
 import { createServer } from 'node:http';
 import { attachRoomSocketServer } from './server/roomSocket';
 import { ROOM_SOCKET_PATH } from './src/remote/socketConfig';
+import {
+  createTurnCredentialsHandler,
+  TURN_CREDENTIALS_PATH
+} from './server/turnCredentialsHandler';
 
 const app = express();
 // The build emits CJS, where import.meta is empty, so paths are resolved from process.cwd()
@@ -12,6 +16,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '10mb' }));
+app.get(TURN_CREDENTIALS_PATH, createTurnCredentialsHandler());
 
 // Helper to get lazy Gemini AI instance
 function getGemini() {
