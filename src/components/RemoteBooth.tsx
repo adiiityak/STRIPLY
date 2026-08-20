@@ -32,6 +32,10 @@ interface RemoteBoothProps {
   entryMode?: 'create' | 'join';
 }
 
+export interface RemoteBoothHandle {
+  leaveRoom: () => void;
+}
+
 interface RemoteBoothViewProps {
   code: string;
   participants: ParticipantSnapshot[];
@@ -242,8 +246,9 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
   );
 };
 
-export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode }) => {
+export const RemoteBooth = React.forwardRef<RemoteBoothHandle, RemoteBoothProps>(({ onComplete, entryMode }, ref) => {
   const session = useRoomSession();
+  React.useImperativeHandle(ref, () => ({ leaveRoom: session.leaveRoom }), [session.leaveRoom]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
@@ -428,4 +433,6 @@ export const RemoteBooth: React.FC<RemoteBoothProps> = ({ onComplete, entryMode 
       />
     </>
   );
-};
+});
+
+RemoteBooth.displayName = 'RemoteBooth';

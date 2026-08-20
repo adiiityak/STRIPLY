@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Camera, X, RefreshCw, Check, Sparkles, Play, Link2 } from 'lucide-react';
 import { constrainImageDimensions } from '../utils/exportUtils';
 import type { PhotoItem, StripConfiguration } from '../types';
-import { RemoteBooth } from './RemoteBooth';
+import { RemoteBooth, type RemoteBoothHandle } from './RemoteBooth';
 import { CountdownOverlay } from './CountdownOverlay';
 import { BackgroundPicker } from './BackgroundPicker';
 import { useLiveBackground } from '../remote/useLiveBackground';
@@ -38,6 +38,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [background, setBackground] = useState<SharedBackground>({ mode: 'original' });
   const liveBackground = useLiveBackground(videoRef, background, boothMode === 'solo');
+  const remoteBoothRef = useRef<RemoteBoothHandle | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -82,6 +83,18 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
+  };
+
+  const closeRemoteBooth = () => {
+    // A deliberate close is different from a refresh: free the server seat and
+    // forget the reconnect token so reopening starts at Create / Join.
+    remoteBoothRef.current?.leaveRoom();
+    const url = new URL(location.href);
+    if (url.searchParams.has('room')) {
+      url.searchParams.delete('room');
+      history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+    onClose();
   };
 
   // Capture single frame
@@ -184,12 +197,13 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
         >
           <div className="mb-2 flex shrink-0 items-center justify-between border-b pb-2 lg:mb-4 lg:pb-3">
             <div><h3 className="font-black">Long-Distance Booth</h3><p className="text-xs text-[#666]">Side-by-side photos with one shared background</p></div>
-            <button onClick={onClose} aria-label="Close remote booth" className="rounded-full p-2 hover:bg-[#FAF9F6]"><X className="h-4 w-4" /></button>
+            <button onClick={closeRemoteBooth} aria-label="Close remote booth" className="rounded-full p-2 hover:bg-[#FAF9F6]"><X className="h-4 w-4" /></button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain lg:overflow-hidden">
             <RemoteBooth
+              ref={remoteBoothRef}
               entryMode={initialRemoteAction}
-              onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); onClose(); }}
+              onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); closeRemoteBooth(); }}
             />
           </div>
         </div>

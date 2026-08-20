@@ -32,6 +32,7 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
   const signalListeners = useRef(new Set<(payload: SignalPayload) => void>());
   const frameListeners = useRef(new Set<(payload: { index: number; dataUrl?: string }) => void>());
   const attemptedReconnect = useRef(false);
+  const explicitlyLeft = useRef(false);
 
   const accept = useCallback((incoming: RoomSnapshot) => {
     if (!shouldAcceptRoomSnapshot(snapshotRef.current, incoming)) return;
@@ -68,6 +69,7 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
   const enter = useCallback(
     (event: 'room:create' | 'room:join', payload: { name: string; code?: string }) =>
       new Promise<boolean>((resolve) => {
+        explicitlyLeft.current = false;
         let settled = false;
         setStatus('connecting');
         setError(null);
@@ -118,6 +120,7 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
   const reconnect = useCallback(() => {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return Promise.resolve(false);
+    explicitlyLeft.current = false;
     let stored: StoredIdentity;
     try {
       stored = JSON.parse(raw) as StoredIdentity;
@@ -128,6 +131,15 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
     return new Promise<boolean>((resolve) => {
       setStatus('connecting');
       socket.emit('room:reconnect', stored, (result) => {
+        // The modal may have been deliberately closed while this request was in
+        // flight. The server binds the seat before acknowledging, so immediately
+        // release that late seat instead of restoring a room the user left.
+        if (explicitlyLeft.current) {
+          if (result.ok && result.data) socket.emit('room:leave');
+          setStatus('idle');
+          resolve(false);
+          return;
+        }
         if (!result.ok || !result.data) {
           sessionStorage.removeItem(STORAGE_KEY);
           setStatus('idle');
@@ -175,6 +187,7 @@ export function useRoomSession(options: UseRoomSessionOptions = {}) {
     return () => frameListeners.current.delete(listener);
   }, []);
   const leaveRoom = useCallback(() => {
+    explicitlyLeft.current = true;
     socket.emit('room:leave');
     sessionStorage.removeItem(STORAGE_KEY);
     snapshotRef.current = null;

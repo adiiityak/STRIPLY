@@ -73,6 +73,42 @@ describe('useRoomSession', () => {
     sessionStorage.clear();
   });
 
+  it('stays left when an in-flight reconnect acknowledges after an explicit exit', async () => {
+    const socket = new FakeSocket();
+    sessionStorage.setItem('striply-remote-room', JSON.stringify({ code: 'ABC234', reconnectToken: 'token-1' }));
+    let reconnectAck: ((result: any) => void) | undefined;
+    socket.emit.mockImplementation((event: string, _payload: any, ack: (result: any) => void) => {
+      if (event === 'room:reconnect') reconnectAck = ack;
+    });
+
+    const { result } = renderHook(() => useRoomSession({ socket: socket as any }));
+    await act(async () => {});
+    expect(result.current.status).toBe('connecting');
+
+    act(() => result.current.leaveRoom());
+    act(() => reconnectAck?.({
+      ok: true,
+      data: {
+        identity: {
+          participant: { id: 'guest-1', name: 'Maya', role: 'guest', ready: false, connection: 'connected' },
+          reconnectToken: 'token-1'
+        },
+        snapshot: {
+          ...snapshot(0),
+          participants: [
+            { id: 'creator-1', name: 'Adk', role: 'creator', ready: false, connection: 'connected' },
+            { id: 'guest-1', name: 'Maya', role: 'guest', ready: false, connection: 'connected' }
+          ]
+        }
+      }
+    }));
+
+    expect(result.current.status).toBe('idle');
+    expect(result.current.self).toBeNull();
+    expect(sessionStorage.getItem('striply-remote-room')).toBeNull();
+    expect(socket.emit.mock.calls.filter(([event]) => event === 'room:leave')).toHaveLength(2);
+  });
+
   it('stops waiting and shows an error when the room server never acknowledges creation', async () => {
     vi.useFakeTimers();
     const socket = new FakeSocket();
