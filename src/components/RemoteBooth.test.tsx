@@ -112,6 +112,34 @@ describe('RemoteBoothView', () => {
     expect(screen.getByTestId('remote-feed-grid').children).toHaveLength(2);
   });
 
+  it('uses a compact mobile stack and moves controls beside the feed on desktop', () => {
+    render(
+      <RemoteBoothView
+        code="ABC234"
+        participants={[
+          { id: 'creator', name: 'Maya', role: 'creator', ready: true, connection: 'connected' },
+          { id: 'guest', name: 'Noah', role: 'guest', ready: true, connection: 'connected' }
+        ]}
+        selfId="creator"
+        shared={shared}
+        phase="ready"
+        frameUrls={[]}
+        onCapture={vi.fn()}
+        onFinish={vi.fn()}
+        onRetake={vi.fn()}
+        onBackgroundChange={vi.fn()}
+        localVideoRef={{ current: null }}
+        remoteVideoRef={{ current: null }}
+      />
+    );
+
+    expect(screen.getByTestId('remote-booth-layout')).toHaveClass(
+      'lg:grid-cols-[minmax(0,1fr)_20rem]'
+    );
+    expect(screen.getByTestId('remote-booth-controls')).toHaveClass('lg:col-start-2');
+    expect(screen.getByTestId('remote-feed-grid')).toHaveClass('aspect-video', 'lg:aspect-[4/3]');
+  });
+
   describe('copy invite button', () => {
     const participants = [
       { id: 'creator', name: 'Maya', role: 'creator' as const, ready: true, connection: 'connected' as const },

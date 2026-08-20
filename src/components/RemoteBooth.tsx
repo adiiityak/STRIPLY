@@ -114,16 +114,19 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
   const ready = participants.length === 2 && participants.every((participant) => participant.connection === 'connected');
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#E8E6DF] bg-[#FAF9F6] p-3">
+    <div
+      data-testid="remote-booth-layout"
+      className="grid min-h-0 grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_1fr] lg:gap-4"
+    >
+      <div className="flex min-h-14 items-center justify-between gap-2 rounded-2xl border border-[#E8E6DF] bg-[#FAF9F6] px-3 py-2 lg:col-start-2 lg:row-start-1 lg:p-3">
         <div>
           <div className="text-[10px] font-bold uppercase tracking-widest text-[#888]">Room code</div>
-          <div className="font-mono text-xl font-black tracking-[.22em]">{code}</div>
+          <div className="font-mono text-lg font-black tracking-[.22em] lg:text-xl">{code}</div>
         </div>
         <button
           onClick={handleCopyInvite}
           aria-live="polite"
-          className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors duration-200 ${
+          className={`flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors duration-200 ${
             copiedInvite
               ? 'border-[#2D2D2D] bg-[#2D2D2D] text-white'
               : 'border-[#E8E6DF] bg-white text-[#2D2D2D]'
@@ -141,7 +144,10 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
         </button>
       </div>
 
-      <div data-testid="remote-feed-grid" className="relative grid grid-cols-2 overflow-hidden rounded-2xl bg-[#222] aspect-[4/3]">
+      <div
+        data-testid="remote-feed-grid"
+        className="relative grid aspect-video grid-cols-2 overflow-hidden rounded-2xl bg-[#222] lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:aspect-[4/3] lg:self-start"
+      >
         <div className="relative min-w-0 overflow-hidden border-r border-white/30">
           {/* The video stays mounted as the segmentation source; the canvas covers
               it while a background is applied. */}
@@ -183,53 +189,55 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
         <CountdownOverlay value={remaining} />
       </div>
 
-      <div className="flex items-center justify-between text-[11px] text-[#666]">
-        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {connectedParticipantCount}/2 joined</span>
-        <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5" /> {connectionState}</span>
-      </div>
+      <div data-testid="remote-booth-controls" className="min-w-0 space-y-2 lg:col-start-2 lg:row-start-2">
+        <div className="flex items-center justify-between text-[11px] text-[#666]">
+          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {connectedParticipantCount}/2 joined</span>
+          <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5" /> {connectionState}</span>
+        </div>
 
-      <BackgroundPicker value={shared.background} onChange={onBackgroundChange} onUpload={onBackgroundUpload} />
-      {backgroundFallback && (
-        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
-          {backgroundFallback === 'too-slow'
-            ? 'This device cannot preview the background smoothly, so the live view stays as-is. Your saved photos still get it.'
-            : 'Live background preview is unavailable on this browser. Your saved photos still get it.'}
-        </p>
-      )}
+        <BackgroundPicker value={shared.background} onChange={onBackgroundChange} onUpload={onBackgroundUpload} />
+        {backgroundFallback && (
+          <p className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
+            {backgroundFallback === 'too-slow'
+              ? 'This device cannot preview the background smoothly, so the live view stays as-is. Your saved photos still get it.'
+              : 'Live background preview is unavailable on this browser. Your saved photos still get it.'}
+          </p>
+        )}
 
-      <div className="grid grid-cols-4 gap-2">
-        {Array.from({ length: 4 }, (_, index) => (
+        <div className="grid grid-cols-4 gap-1.5 lg:gap-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <button
+              key={index}
+              onClick={() => frameUrls[index] && onRetake(index)}
+              className="relative aspect-video min-h-11 overflow-hidden rounded-xl border bg-[#FAF9F6] lg:aspect-[4/3]"
+              aria-label={frameUrls[index] ? `Retake photo ${index + 1}` : `Photo ${index + 1} empty`}
+            >
+              {frameUrls[index] ? <img src={frameUrls[index]} alt={`Remote frame ${index + 1}`} className="h-full w-full object-cover" /> : <span className="text-xs text-[#aaa]">{index + 1}</span>}
+              {frameUrls[index] && <RefreshCw className="absolute right-1 top-1 h-3 w-3 rounded bg-black/60 p-0.5 text-white" />}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
           <button
-            key={index}
-            onClick={() => frameUrls[index] && onRetake(index)}
-            className="relative aspect-[4/3] overflow-hidden rounded-xl border bg-[#FAF9F6]"
-            aria-label={frameUrls[index] ? `Retake photo ${index + 1}` : `Photo ${index + 1} empty`}
+            onClick={onCapture}
+            disabled={!ready || running}
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-4 py-2 text-sm font-black text-white disabled:opacity-40 lg:px-5 lg:py-3"
           >
-            {frameUrls[index] ? <img src={frameUrls[index]} alt={`Remote frame ${index + 1}`} className="h-full w-full object-cover" /> : <span className="text-xs text-[#aaa]">{index + 1}</span>}
-            {frameUrls[index] && <RefreshCw className="absolute right-1 top-1 h-3 w-3 rounded bg-black/60 p-0.5 text-white" />}
+            <Camera className="h-4 w-4" />
+            {running
+              ? `Taking photo ${Math.min(frameUrls.length + 1, TOTAL_FRAMES)} of ${TOTAL_FRAMES}…`
+              : frameUrls.length > 0
+                ? `Resume — ${frameUrls.length}/${TOTAL_FRAMES} taken`
+                : `Start photo booth — ${TOTAL_FRAMES} shots`}
           </button>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={onCapture}
-          disabled={!ready || running}
-          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-3 text-sm font-black text-white disabled:opacity-40"
-        >
-          <Camera className="h-4 w-4" />
+        </div>
+        <p className="hidden text-center text-[10px] text-[#777] lg:block">
           {running
-            ? `Taking photo ${Math.min(frameUrls.length + 1, TOTAL_FRAMES)} of ${TOTAL_FRAMES}…`
-            : frameUrls.length > 0
-              ? `Resume — ${frameUrls.length}/${TOTAL_FRAMES} taken`
-              : `Start photo booth — ${TOTAL_FRAMES} shots`}
-        </button>
+            ? 'Hold still. The booth takes all four on its own.'
+            : `One tap takes ${TOTAL_FRAMES} photos with a countdown before each, then opens the editor.`}
+        </p>
       </div>
-      <p className="text-center text-[10px] text-[#777]">
-        {running
-          ? 'Hold still. The booth takes all four on its own.'
-          : `One tap takes ${TOTAL_FRAMES} photos with a countdown before each, then opens the editor.`}
-      </p>
     </div>
   );
 };

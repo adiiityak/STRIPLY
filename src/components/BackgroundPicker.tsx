@@ -26,19 +26,19 @@ interface BackgroundPickerProps {
 }
 
 export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onChange, onUpload }) => (
-  <div className="space-y-2">
-    <div className="flex gap-2 overflow-x-auto pb-1">
+  <div className="min-w-0 space-y-1.5 lg:space-y-2">
+    <div className="flex gap-1.5 overflow-x-auto pb-1 lg:gap-2">
       <button
         aria-pressed={value.mode === 'original'}
         onClick={() => onChange({ mode: 'original' })}
-        className="shrink-0 rounded-xl border px-3 py-2 text-[11px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5]"
+        className="min-h-11 shrink-0 rounded-xl border px-2.5 py-2 text-[11px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5] lg:px-3"
       >
         Original
       </button>
       <button
         aria-pressed={value.mode === 'removed'}
         onClick={() => onChange({ mode: 'removed' })}
-        className="shrink-0 rounded-xl border px-3 py-2 text-[11px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5]"
+        className="min-h-11 shrink-0 rounded-xl border px-2.5 py-2 text-[11px] font-bold aria-pressed:border-[#FF6B6B] aria-pressed:bg-[#FFF5F5] lg:px-3"
       >
         Remove background
       </button>
@@ -48,11 +48,11 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onCha
           aria-label={preset.name}
           aria-pressed={value.mode === 'preset' && value.value === preset.value}
           onClick={() => onChange({ mode: 'preset', value: preset.value })}
-          className="h-10 w-14 shrink-0 overflow-hidden rounded-xl border-2 aria-pressed:border-[#FF6B6B]"
+          className="h-11 w-12 shrink-0 overflow-hidden rounded-xl border-2 aria-pressed:border-[#FF6B6B] lg:w-14"
           style={{ backgroundImage: `url(${preset.value})`, backgroundSize: 'cover' }}
         />
       ))}
-      <label className="shrink-0 cursor-pointer rounded-xl border px-3 py-2 text-[11px] font-bold">
+      <label className="flex min-h-11 shrink-0 cursor-pointer items-center rounded-xl border px-3 py-2 text-[11px] font-bold">
         Upload
         <input
           className="sr-only"
@@ -62,6 +62,6 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onCha
         />
       </label>
     </div>
-    <p className="text-[10px] text-[#777]">One shared background. Changes from either person sync instantly.</p>
+    <p className="hidden text-[10px] text-[#777] lg:block">One shared background. Changes from either person sync instantly.</p>
   </div>
 );

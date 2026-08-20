@@ -174,16 +174,24 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
 
   if (boothMode === 'remote') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-        <div className="relative max-h-[96vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-[#E8E6DF] bg-white p-4 sm:p-6 shadow-2xl">
-          <div className="mb-4 flex items-center justify-between border-b pb-3">
+      <div
+        data-testid="remote-booth-backdrop"
+        className="fixed inset-0 z-50 flex h-[100dvh] items-start justify-center overflow-hidden bg-[#2D2D2D]/60 backdrop-blur-xs lg:items-center lg:p-4"
+      >
+        <div
+          data-testid="remote-booth-dialog"
+          className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] shadow-2xl lg:h-auto lg:max-h-[calc(100dvh-2rem)] lg:max-w-6xl lg:rounded-3xl lg:border lg:border-[#E8E6DF] lg:p-6"
+        >
+          <div className="mb-2 flex shrink-0 items-center justify-between border-b pb-2 lg:mb-4 lg:pb-3">
             <div><h3 className="font-black">Long-Distance Booth</h3><p className="text-xs text-[#666]">Side-by-side photos with one shared background</p></div>
             <button onClick={onClose} aria-label="Close remote booth" className="rounded-full p-2 hover:bg-[#FAF9F6]"><X className="h-4 w-4" /></button>
           </div>
-          <RemoteBooth
-            entryMode={initialRemoteAction}
-            onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); onClose(); }}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain lg:overflow-hidden">
+            <RemoteBooth
+              entryMode={initialRemoteAction}
+              onComplete={(photos, config) => { onRemoteSessionComplete(photos, config); onClose(); }}
+            />
+          </div>
         </div>
       </div>
     );
