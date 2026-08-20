@@ -121,4 +121,15 @@ describe('createSignalQueue', () => {
     await flush();
     expect(applied).toContain('ice:after-error');
   });
+
+  it('delivers a partner recovery request without touching the peer description', async () => {
+    const { peer } = fakePeer();
+    const onRestartRequest = vi.fn();
+    const queue = createSignalQueue(peer, vi.fn(), vi.fn(), onRestartRequest);
+
+    queue({ kind: 'restart', data: {} });
+    await flush();
+
+    expect(onRestartRequest).toHaveBeenCalledTimes(1);
+  });
 });

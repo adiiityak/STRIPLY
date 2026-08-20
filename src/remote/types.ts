@@ -59,8 +59,8 @@ export interface RoomAck<T = undefined> {
 }
 
 export interface SignalPayload {
-  kind: 'offer' | 'answer' | 'ice';
-  data: RTCSessionDescriptionInit | RTCIceCandidateInit;
+  kind: 'offer' | 'answer' | 'ice' | 'restart';
+  data: RTCSessionDescriptionInit | RTCIceCandidateInit | Record<string, never>;
 }
 
 export interface ClientToServerEvents {

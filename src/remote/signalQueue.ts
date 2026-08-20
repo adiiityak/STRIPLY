@@ -22,7 +22,8 @@ export interface SignalTarget {
 export function createSignalQueue(
   peer: SignalTarget,
   sendSignal: (payload: SignalPayload) => void,
-  onError: (error: unknown) => void
+  onError: (error: unknown) => void,
+  onRestartRequest: () => void = () => {}
 ) {
   const pendingCandidates: RTCIceCandidateInit[] = [];
   let chain: Promise<void> = Promise.resolve();
@@ -34,6 +35,11 @@ export function createSignalQueue(
   };
 
   const handle = async (payload: SignalPayload) => {
+    if (payload.kind === 'restart') {
+      onRestartRequest();
+      return;
+    }
+
     if (payload.kind === 'offer') {
       await peer.setRemoteDescription(payload.data as RTCSessionDescriptionInit);
       const answer = await peer.createAnswer();

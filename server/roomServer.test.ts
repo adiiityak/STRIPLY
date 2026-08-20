@@ -33,4 +33,49 @@ describe('room service entrypoint', () => {
     expect(created.ok).toBe(true);
     expect(created.data.snapshot.code).toMatch(/^[A-Z0-9]{6}$/);
   });
+
+  it('serves temporary TURN credentials from the room service', async () => {
+    const { server, io } = createRoomHttpServer({
+      environment: {
+        CLOUDFLARE_TURN_KEY_ID: 'turn-key-id',
+        CLOUDFLARE_TURN_API_TOKEN: 'permanent-api-token'
+      },
+      fetcher: async () =>
+        new Response(
+          JSON.stringify({
+            iceServers: [
+              { urls: ['stun:stun.cloudflare.com:3478'] },
+              {
+                urls: ['turns:turn.cloudflare.com:443?transport=tcp'],
+                username: 'temporary-user',
+                credential: 'temporary-credential'
+              }
+            ]
+          }),
+          { status: 201, headers: { 'Content-Type': 'application/json' } }
+        )
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('missing test address');
+    cleanups.push(async () => {
+      await new Promise<void>((resolve) => io.close(() => resolve()));
+    });
+
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/api/socket-io/turn-credentials`
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      iceServers: [
+        { urls: ['stun:stun.cloudflare.com:3478'] },
+        {
+          urls: ['turns:turn.cloudflare.com:443?transport=tcp'],
+          username: 'temporary-user',
+          credential: 'temporary-credential'
+        }
+      ]
+    });
+  });
 });

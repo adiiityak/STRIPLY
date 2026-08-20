@@ -44,10 +44,23 @@ deploys the Vite app as the `web` service and a persistent Node/Socket.IO
 backend as the `room` service. Requests to `/api/socket-io/socket.io` are routed
 to that backend.
 Socket connections reconnect when a function reaches its maximum duration.
-For reliable calls across mobile networks, configure the STUN/TURN values from
-`.env.example` in the deployed environment. Background removal runs in the
-browser only when selected; if the optional model cannot load, capture safely
-falls back to the original camera frames.
+For reliable calls across mobile networks, create a TURN key in Cloudflare
+Realtime and configure these server-side environment variables on the deployed
+room service:
+
+```bash
+CLOUDFLARE_TURN_KEY_ID=your-turn-key-id
+CLOUDFLARE_TURN_API_TOKEN=your-turn-key-api-token
+```
+
+Do not prefix either variable with `VITE_`: the permanent values must never be
+included in the browser bundle. The room service exchanges them for one-hour
+temporary credentials, and the browser falls back to the existing STUN/static
+TURN configuration if Cloudflare is temporarily unavailable. An unhealthy call
+first attempts an ICE restart; repeated or wedged failures rebuild the peer
+connection and ask the creator for a fresh offer automatically. Background
+removal runs in the browser only when selected; if the optional model cannot
+load, capture safely falls back to the original camera frames.
 
 ## Checks
 
