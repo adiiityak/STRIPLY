@@ -12,11 +12,7 @@ ALLOWED_ORIGINS = "http://localhost:3000,https://striply-psi.vercel.app"
 [[d1_databases]]
 binding = "DB"
 database_name = "striply"
-# Placeholder. Local dev keys off database_name and ignores this, but wrangler
-# refuses to start when it is empty. Replace with the id printed by
-# `wrangler d1 create striply` before deploying -- a deploy with this value
-# would bind to a database that does not exist.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "571bfab4-9564-43ce-8cac-d79fc10ffcb1"
 
 [[r2_buckets]]
 binding = "STRIPS"
