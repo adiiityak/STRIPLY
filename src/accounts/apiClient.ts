@@ -43,10 +43,17 @@ interface AccountsApiOptions {
 }
 
 export class AccountsApi {
-  constructor(private readonly options: AccountsApiOptions) {}
+  /**
+   * Bound at construction.
+   *
+   * Native fetch checks its receiver, so reaching it through `this.something(...)`
+   * calls it with this object as the receiver and throws "Illegal invocation".
+   * Binding once here keeps every call site safe.
+   */
+  private readonly doFetch: typeof fetch;
 
-  private get fetchImpl() {
-    return this.options.fetchImpl ?? fetch;
+  constructor(private readonly options: AccountsApiOptions) {
+    this.doFetch = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
   }
 
   private async send(path: string, init: RequestInit = {}, authenticated = true): Promise<Response> {
@@ -58,7 +65,7 @@ export class AccountsApi {
     }
     if (init.body) headers['Content-Type'] = 'application/json';
 
-    const response = await this.fetchImpl(`${this.options.baseUrl}${path}`, { ...init, headers });
+    const response = await this.doFetch(`${this.options.baseUrl}${path}`, { ...init, headers });
 
     if (response.status === 401 && authenticated) {
       // An expired or revoked session should log the user out once, here, rather

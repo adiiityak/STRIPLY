@@ -49,6 +49,39 @@ function api(fetchImpl: typeof fetch, token: string | null = 'session-token') {
 }
 
 describe('AccountsApi', () => {
+  // Every other test injects a fake fetch, so the real default path went
+  // unexercised and shipped broken: reaching native fetch through a property of
+  // this object calls it with the wrong receiver, and the browser answers
+  // "Failed to execute 'fetch' on 'Window': Illegal invocation".
+  it('calls the global fetch without breaking its receiver', async () => {
+    const globalFetch = vi.fn(async () => jsonResponse({ strips: [] }));
+    vi.stubGlobal('fetch', globalFetch);
+
+    const client = new AccountsApi({ baseUrl: 'https://api.example.com', getToken: () => 'tkn' });
+    await expect(client.listStrips()).resolves.toEqual([]);
+    expect(globalFetch).toHaveBeenCalledTimes(1);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('binds fetch at construction, not per call', async () => {
+    // A getter returning native fetch is the shape that failed; binding once at
+    // construction is what this asserts.
+    const calls: unknown[] = [];
+    vi.stubGlobal('fetch', function (this: unknown, ...args: unknown[]) {
+      calls.push(this);
+      return Promise.resolve(jsonResponse({ strips: [] }));
+    });
+
+    const client = new AccountsApi({ baseUrl: 'https://api.example.com', getToken: () => 'tkn' });
+    await client.listStrips();
+
+    // The receiver must not be the AccountsApi instance.
+    expect(calls[0]).not.toBe(client);
+
+    vi.unstubAllGlobals();
+  });
+
   it('sends the session as a bearer token', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ strips: [strip] })) as unknown as typeof fetch;
     const { client } = api(fetchImpl);
