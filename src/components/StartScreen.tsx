@@ -54,7 +54,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           className="w-full px-5 py-3.5 bg-[#FF6B6B] hover:bg-[#ff5252] text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
         >
           <Camera className="w-4 h-4" />
-          Click live picture
+          Start the photobooth cam
         </button>
 
         <button

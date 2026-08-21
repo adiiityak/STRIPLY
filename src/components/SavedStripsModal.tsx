@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Trash2, Download, LogOut, Save, Loader2 } from 'lucide-react';
+import { X, Trash2, Download, Save, Loader2 } from 'lucide-react';
 import type { Account } from '../accounts/useAccount';
 import type { SavedStrip } from '../accounts/types';
-import { forgetGoogleSelection, renderGoogleSignIn } from '../accounts/googleIdentity';
+import { renderGoogleSignIn } from '../accounts/googleIdentity';
 
 interface SavedStripsModalProps {
   account: Account;
@@ -130,9 +130,12 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Saved strips"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-6"
     >
-      <div className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white p-5">
+      {/* Roomy enough to actually browse a gallery: near-full-height on a phone,
+          a wide grid on a laptop. The previous max-w-lg showed one strip per row
+          with most of the panel empty. */}
+      <div className="flex h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-white p-5 sm:h-[85dvh] sm:rounded-3xl sm:p-6">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-lg font-black text-[#2D2D2D]">My strips</h3>
@@ -183,15 +186,6 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save current strip
               </button>
-              <button
-                onClick={() => {
-                  void forgetGoogleSelection();
-                  account.signOut();
-                }}
-                className="flex items-center gap-1.5 rounded-xl border border-[#E8E6DF] px-4 py-2 text-xs font-bold text-[#2D2D2D]"
-              >
-                <LogOut className="h-3.5 w-3.5" /> Sign out
-              </button>
             </div>
 
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
@@ -199,17 +193,17 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
               {!loading && strips.length === 0 && (
                 <p className="py-6 text-center text-xs text-[#666]">No saved strips yet.</p>
               )}
-              <ul className="grid grid-cols-3 gap-3">
+              <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
                 {strips.map((strip) => (
                   <li key={strip.id} className="rounded-xl border border-[#E8E6DF] p-2">
                     {thumbnails[strip.id] ? (
                       <img
                         src={thumbnails[strip.id]}
                         alt="Saved strip"
-                        className="h-32 w-full rounded-lg object-contain"
+                        className="h-40 w-full rounded-lg object-contain sm:h-44"
                       />
                     ) : (
-                      <div className="flex h-32 items-center justify-center rounded-lg bg-[#FAF9F6]">
+                      <div className="flex h-40 items-center justify-center rounded-lg bg-[#FAF9F6] sm:h-44">
                         <Loader2 className="h-4 w-4 animate-spin text-[#CCC]" />
                       </div>
                     )}

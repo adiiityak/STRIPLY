@@ -10,6 +10,7 @@ import { StartScreen } from './components/StartScreen';
 import { SavedStripsModal } from './components/SavedStripsModal';
 import { LandingPage } from './components/LandingPage';
 import { useAccount } from './accounts/useAccount';
+import { forgetGoogleSelection } from './accounts/googleIdentity';
 import { PhotoItem, StripConfiguration, PlacedSticker } from './types';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
@@ -335,6 +336,18 @@ export default function App() {
           onOpenSavedStrips={
             account.status === 'unconfigured' ? undefined : () => setIsSavedStripsOpen(true)
           }
+          onSignOut={
+            account.status === 'unconfigured'
+              ? undefined
+              : () => {
+                  // Ask Google to forget the selection too, or it silently
+                  // re-picks the same account and signing out looks broken.
+                  void forgetGoogleSelection();
+                  account.signOut();
+                }
+          }
+          accountName={account.user?.name}
+          accountEmail={account.user?.email}
           accountPicture={account.user?.picture}
         />
       )}

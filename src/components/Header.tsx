@@ -1,5 +1,6 @@
 import React from 'react';
-import { Camera, Shuffle, Download, Video, RefreshCw, Share2, BookmarkPlus } from 'lucide-react';
+import { Shuffle, Download, Video, RefreshCw, Share2 } from 'lucide-react';
+import { ProfileMenu } from './ProfileMenu';
 
 interface HeaderProps {
   onOpenWebcam: () => void;
@@ -7,8 +8,11 @@ interface HeaderProps {
   onQuickExportPNG: () => void;
   onOpenShareModal: () => void;
   isExporting: boolean;
-  /** Omitted entirely when accounts are not configured for this deployment. */
+  /** All omitted when accounts are not configured for this deployment. */
   onOpenSavedStrips?: () => void;
+  onSignOut?: () => void;
+  accountName?: string;
+  accountEmail?: string;
   accountPicture?: string;
 }
 
@@ -19,6 +23,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenShareModal,
   isExporting,
   onOpenSavedStrips,
+  onSignOut,
+  accountName,
+  accountEmail,
   accountPicture
 }) => {
   return (
@@ -26,12 +33,11 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto flex flex-nowrap lg:flex-wrap items-center justify-between gap-2 lg:gap-3">
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-          <div className="w-8 h-8 lg:w-10 lg:h-10 shrink-0 bg-[#FF6B6B] rounded-xl flex items-center justify-center shadow-md transform -rotate-6">
-            <Camera className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-          </div>
-          <div>
+          {/* Truncates rather than sliding under the action row, which cannot
+              shrink. */}
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg lg:text-2xl font-black tracking-tighter text-[#FF6B6B]">
+              <h1 className="truncate text-lg lg:text-2xl font-black tracking-tighter text-[#FF6B6B]">
                 STRIPLY
               </h1>
               <span className="hidden lg:inline-flex text-[10px] font-bold tracking-wider uppercase bg-[#FFF5F5] text-[#FF6B6B] border border-[#FF6B6B]/20 px-2.5 py-0.5 rounded-full">
@@ -68,23 +74,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Shuffle</span>
           </button>
 
-          {/* Saved strips. Absent unless this deployment has accounts configured. */}
-          {onOpenSavedStrips && (
-            <button
-              onClick={onOpenSavedStrips}
-              className="px-3.5 py-2.5 lg:py-2 rounded-xl bg-[#FAF9F6] hover:bg-[#F0EEE9] text-[#2D2D2D] text-xs font-semibold border border-[#E8E6DF] transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
-              title="My saved strips"
-              aria-label="My strips"
-            >
-              {accountPicture ? (
-                <img src={accountPicture} alt="" className="w-4 h-4 rounded-full" />
-              ) : (
-                <BookmarkPlus className="w-3.5 h-3.5 text-[#FF6B6B]" />
-              )}
-              <span className="hidden sm:inline">My strips</span>
-            </button>
-          )}
-
           {/* Direct Social Share Button */}
           <button
             onClick={onOpenShareModal}
@@ -110,6 +99,17 @@ export const Header: React.FC<HeaderProps> = ({
             )}
             <span className="hidden sm:inline">Export</span>
           </button>
+
+          {/* Account. Last in the row, which is where every other app puts it. */}
+          {onOpenSavedStrips && onSignOut && (
+            <ProfileMenu
+              name={accountName}
+              email={accountEmail}
+              picture={accountPicture}
+              onOpenSavedStrips={onOpenSavedStrips}
+              onSignOut={onSignOut}
+            />
+          )}
         </div>
       </div>
     </header>
