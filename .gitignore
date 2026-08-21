@@ -9,3 +9,7 @@ coverage/
 .superpowers/
 .claude/
 .worktrees/
+
+# Local Worker secrets
+.dev.vars
+.wrangler/

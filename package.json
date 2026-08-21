@@ -16,8 +16,10 @@
     "previews:generate": "node scripts/generate-template-previews.mjs",
     "test:e2e": "playwright test",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "lint": "tsc --noEmit && tsc --noEmit -p worker/tsconfig.json",
+    "test": "vitest run",
+    "dev:api": "wrangler dev",
+    "api:schema": "wrangler d1 execute striply --local --file worker/schema.sql"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -42,6 +44,7 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260821.1",
     "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
@@ -54,6 +57,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.125.0"
   }
 }

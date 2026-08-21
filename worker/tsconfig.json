@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022"],
+    "types": ["@cloudflare/workers-types"],
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "noEmit": true,
+    // The Worker is new code and handles auth, so it is held to stricter rules
+    // than the app. Without strictNullChecks a discriminated union does not
+    // narrow at all, which is how an unchecked failure branch slips through.
+    "strict": true,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["**/*.ts"]
+}
