@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { X, Trash2, Download, Save, Loader2 } from 'lucide-react';
+import { X, Trash2, Download, Loader2 } from 'lucide-react';
 import type { Account } from '../accounts/useAccount';
 import type { SavedStrip } from '../accounts/types';
 import { renderGoogleSignIn } from '../accounts/googleIdentity';
@@ -8,10 +8,6 @@ interface SavedStripsModalProps {
   account: Account;
   isOpen: boolean;
   onClose: () => void;
-  /** Produces the current strip as a PNG data URL, or null if there is nothing to save. */
-  onRequestCurrentStrip: () => Promise<string | null>;
-  templateId?: string;
-  layout?: string;
 }
 
 /** Blob URLs are created per thumbnail and must be revoked to avoid leaking. */
@@ -48,15 +44,11 @@ function useStripThumbnails(account: Account, strips: SavedStrip[]) {
 export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
   account,
   isOpen,
-  onClose,
-  onRequestCurrentStrip,
-  templateId,
-  layout
+  onClose
 }) => {
   const signInRef = useRef<HTMLDivElement | null>(null);
   const [strips, setStrips] = useState<SavedStrip[]>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const thumbnails = useStripThumbnails(account, strips);
 
@@ -94,25 +86,6 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
       cancelled = true;
     };
   }, [isOpen, account.status, account.config.googleClientId, account.signInWithCredential]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    setMessage(null);
-    try {
-      const image = await onRequestCurrentStrip();
-      if (!image) {
-        setMessage('Add some photos before saving a strip.');
-        return;
-      }
-      await account.api.saveStrip({ image, templateId, layout });
-      setMessage('Saved to your account.');
-      await refresh();
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : 'Could not save that strip.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDelete = async (strip: SavedStrip) => {
     try {
@@ -177,17 +150,6 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
 
         {account.status === 'signed-in' && (
           <>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-1.5 rounded-xl bg-[#FF6B6B] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"
-              >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                Save current strip
-              </button>
-            </div>
-
             <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
               {loading && <p className="py-6 text-center text-xs text-[#666]">Loading your strips…</p>}
               {!loading && strips.length === 0 && (

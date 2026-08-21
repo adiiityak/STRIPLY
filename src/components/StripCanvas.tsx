@@ -150,6 +150,12 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
       stk: PlacedSticker
     ) => {
       if (event.button !== 0) return;
+      // Never start a drag from the rotate/delete controls. Setting pointer
+      // capture below retargets the whole gesture -- including the click -- to
+      // this container, so a press that began on a control button would have its
+      // click delivered here instead of to the button, and neither icon would
+      // ever fire.
+      if ((event.target as HTMLElement | null)?.closest('[data-sticker-control]')) return;
       // Keep the canvas pan gesture from also starting.
       event.stopPropagation();
       setSelectedStickerId(stk.id);
@@ -1248,7 +1254,11 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
                 <span className="relative text-2xl drop-shadow-md select-none">{stk.symbol}</span>
 
                 {selectedStickerId === stk.id && (
-                  <div className="no-export absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#2D2D2D] text-white rounded-full px-2 py-0.5 text-[10px] shadow-lg">
+                  <div
+                    data-sticker-control
+                    data-no-pan
+                    className="no-export absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#2D2D2D] text-white rounded-full px-2 py-0.5 text-[10px] shadow-lg"
+                  >
                     <button
                       onClick={(e) => {
                         e.stopPropagation();

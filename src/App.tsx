@@ -23,7 +23,7 @@ import {
 } from './utils/exportUtils';
 import { useCanvasPan } from './hooks/useCanvasPan';
 import { optimisePhotoFile } from './utils/photoImport';
-import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle, BookmarkPlus } from 'lucide-react';
 
 const DEFAULT_TEMPLATE_ID = 'airmail';
 const DEFAULT_TEMPLATE =
@@ -44,6 +44,7 @@ export default function App() {
   // account UI is rendered at all.
   const account = useAccount();
   const [isSavedStripsOpen, setIsSavedStripsOpen] = useState(false);
+  const [isSavingStrip, setIsSavingStrip] = useState(false);
 
   // Drag-to-pan the strip. The scroll container is <main>; anything marked data-no-pan
   // (the zoom toolbar, the sticker layer) keeps its own gestures.
@@ -72,6 +73,24 @@ export default function App() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const socialSharePreviewRef = useRef<string | null>(null);
   const socialShareRenderRef = useRef<Promise<string> | null>(null);
+
+  const handleSaveToGallery = async () => {
+    if (!canvasRef.current || photos.length === 0) {
+      showToast('Add some photos before saving a strip.');
+      return;
+    }
+    setIsSavingStrip(true);
+    try {
+      // Reuses the export path, so a saved strip is what Export produces.
+      const image = await exportStripToDataUrl(canvasRef.current);
+      await account.api.saveStrip({ image, templateId: config.style, layout: config.photoLayout });
+      showToast('Saved to your strips gallery! ✨');
+    } catch (cause) {
+      showToast(cause instanceof Error ? cause.message : 'Could not save that strip.');
+    } finally {
+      setIsSavingStrip(false);
+    }
+  };
 
   // An invite link opens its room directly. Deferred until the visitor is past
   // the sign-up gate, so someone arriving from an invite signs up first and then
@@ -391,6 +410,29 @@ export default function App() {
             isPanning ? 'cursor-grabbing' : canPan ? 'cursor-grab' : ''
           }`}
         >
+          {/* Save to gallery sits beside the strip rather than inside the
+              gallery dialog: saving is something you do to the strip you are
+              looking at, so it belongs where you are looking. */}
+          {account.status === 'signed-in' && (
+            <div data-no-pan className="absolute top-4 left-4 z-20">
+              <button
+                onClick={handleSaveToGallery}
+                disabled={isSavingStrip || photos.length === 0}
+                aria-label="Save this strip to my strips gallery"
+                title="Save this strip to my strips gallery"
+                className="flex items-center gap-1.5 rounded-2xl border border-[#FF6B6B]/30 bg-white/90 px-3 py-2.5 text-xs font-bold text-[#FF6B6B] shadow-md backdrop-blur-md transition-all hover:bg-[#FFF5F5] active:scale-95 disabled:opacity-45 lg:py-2"
+              >
+                {isSavingStrip ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <BookmarkPlus className="h-3.5 w-3.5" />
+                )}
+                <span className="hidden sm:inline">Save this strip to my strips gallery</span>
+                <span className="sm:hidden">Save</span>
+              </button>
+            </div>
+          )}
+
           {/* Canvas Zoom Toolbar floating top-right */}
           <div
             data-no-pan
@@ -493,14 +535,6 @@ export default function App() {
           account={account}
           isOpen={isSavedStripsOpen}
           onClose={() => setIsSavedStripsOpen(false)}
-          templateId={config.style}
-          layout={config.photoLayout}
-          onRequestCurrentStrip={async () => {
-            if (photos.length === 0 || !canvasRef.current) return null;
-            // Reuses the existing export path, so a saved strip is byte-for-byte
-            // what Export produces.
-            return exportStripToDataUrl(canvasRef.current);
-          }}
         />
       )}
 
