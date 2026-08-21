@@ -36,6 +36,55 @@ artwork, labels, and decorative elements are designed around that format. The
 2 × 2 option is disabled for those templates; choose a template that supports
 both layouts to switch between them.
 
+### Accounts and saved strips
+
+Sign-in and saved strips are served by a Cloudflare Worker in `worker/`, with D1
+for metadata and R2 for the images. The Vite app talks to it over HTTP; nothing
+about accounts renders unless both `VITE_API_BASE_URL` and
+`VITE_GOOGLE_CLIENT_ID` are set, so a deployment without them is the app exactly
+as it was before.
+
+Deployed API: `https://striply-api.striply.workers.dev`
+
+Frontend environment variables:
+
+```bash
+VITE_API_BASE_URL=https://striply-api.striply.workers.dev
+VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+```
+
+Worker configuration lives in `wrangler.toml`, except the signing secret:
+
+```bash
+# never echo the value; piping keeps it out of scrollback
+openssl rand -base64 32 | wrangler secret put SESSION_SECRET
+```
+
+Local development needs two processes and two gitignored files — `.dev.vars`
+for the Worker and `.env.local` for the app:
+
+```bash
+npm run dev:api   # Worker on :8787, local D1 and R2
+npm run dev       # app on :3000
+npm run api:schema  # apply schema.sql to the LOCAL database
+```
+
+Local and remote D1 are separate databases, and the local one is keyed by
+`database_id` — changing that value in `wrangler.toml` orphans the schema you
+already applied, and the app then fails with a 500 on sign-in. Apply the schema
+to each explicitly:
+
+```bash
+wrangler d1 execute striply --local  --file worker/schema.sql
+wrangler d1 execute striply --remote --file worker/schema.sql
+```
+
+Google sign-in needs the page's origin registered under **Authorised JavaScript
+origins** on the OAuth client — the API's origin is irrelevant to Google. Each
+Vercel preview deployment gets a fresh hostname and Google has no wildcard for
+origins, so previews cannot sign in; test on `http://localhost:3000` or on a
+stable domain.
+
 ### Long-distance booth deployment
 
 Room state and WebRTC signaling use Socket.IO on the same server as the app.
