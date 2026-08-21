@@ -2,6 +2,14 @@ name = "striply-api"
 main = "worker/index.ts"
 compatibility_date = "2026-08-01"
 
+# Kept here rather than set in the dashboard, because `wrangler deploy` pushes
+# this file and would otherwise switch logging back off. Without it, a failed
+# sign-in leaves no trace unless someone happens to be running `wrangler tail`
+# at that exact moment.
+[observability.logs]
+enabled = true
+invocation_logs = true
+
 # Public, and must match the frontend's VITE_GOOGLE_CLIENT_ID.
 # SESSION_SECRET is a secret, not a var: set it with
 #   wrangler secret put SESSION_SECRET
