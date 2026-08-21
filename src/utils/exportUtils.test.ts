@@ -18,6 +18,11 @@ type ExportSizingApi = {
     sourceHeight: number,
     box: { x: number; y: number; width: number; height: number }
   ) => { x: number; y: number; width: number; height: number };
+  coverImageWithin?: (
+    sourceWidth: number,
+    sourceHeight: number,
+    box: { x: number; y: number; width: number; height: number }
+  ) => { x: number; y: number; width: number; height: number };
   shouldIncludeInExport?: (node: HTMLElement) => boolean;
   isCanvasVisuallyBlank?: (
     canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
@@ -263,6 +268,12 @@ describe('export image sizing', () => {
       widthInches: 2.7,
       heightInches: 6
     });
+  });
+
+  it('covers the full 2.7 by 6 canvas without white side padding', () => {
+    expect(
+      sizing.coverImageWithin?.(600, 1800, { x: 0, y: 0, width: 810, height: 1800 })
+    ).toEqual({ x: 0, y: -315, width: 810, height: 2430 });
   });
 
   it('places every PDF strip at exactly 2.7 by 6 inches', () => {

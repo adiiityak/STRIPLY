@@ -87,6 +87,23 @@ export function fitImageWithin(
   };
 }
 
+export function coverImageWithin(
+  sourceWidth: number,
+  sourceHeight: number,
+  box: { x: number; y: number; width: number; height: number }
+): { x: number; y: number; width: number; height: number } {
+  const scale = Math.max(box.width / sourceWidth, box.height / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+
+  return {
+    x: box.x + (box.width - width) / 2,
+    y: box.y + (box.height - height) / 2,
+    width,
+    height
+  };
+}
+
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
 
@@ -420,7 +437,7 @@ async function normalisePhotoStripDataUrl(dataUrl: string): Promise<string> {
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, size.width, size.height);
-  const placement = fitImageWithin(
+  const placement = coverImageWithin(
     image.naturalWidth || image.width,
     image.naturalHeight || image.height,
     { x: 0, y: 0, width: size.width, height: size.height }
