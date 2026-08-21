@@ -5,6 +5,8 @@ interface StartScreenProps {
   onTakeLivePicture: () => void;
   onUploadPhotos: (files: FileList) => void;
   onExploreApp: () => void;
+  /** A returning visitor does not need inviting to explore what they know. */
+  isReturningUser?: boolean;
   onCreateRoom: () => void;
   onJoinRoom: () => void;
 }
@@ -17,6 +19,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onTakeLivePicture,
   onUploadPhotos,
   onExploreApp,
+  isReturningUser = false,
   onCreateRoom,
   onJoinRoom
 }) => {
@@ -102,7 +105,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
         onClick={onExploreApp}
         className="mt-6 text-xs font-semibold text-[#666666] hover:text-[#2D2D2D] underline underline-offset-4 decoration-[#E8E6DF] hover:decoration-[#666666] transition-colors cursor-pointer"
       >
-        Explore the app first
+        {isReturningUser ? 'Go to app' : 'Explore the app first'}
       </button>
     </div>
   );

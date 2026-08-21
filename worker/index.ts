@@ -100,7 +100,9 @@ async function handle(request: Request, env: Env, headers: Record<string, string
       return json(
         {
           token: await createSessionToken(userId, env.SESSION_SECRET, now),
-          user: { id: userId, email: claims.email, name: claims.name, picture: claims.picture }
+          user: { id: userId, email: claims.email, name: claims.name, picture: claims.picture },
+          // Lets the app greet a returning visitor differently from a new one.
+          isNewUser: !existing
         },
         200,
         headers

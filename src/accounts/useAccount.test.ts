@@ -132,3 +132,54 @@ describe('useAccount', () => {
     expect(result.current.status).toBe('signed-out');
   });
 });
+
+describe('new versus returning visitors', () => {
+  // A returning visitor should not be invited to explore something they already
+  // know, so the app needs to tell the two apart.
+  it('reports a brand-new account as new', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ token: 't', user: { id: 'u1' }, isNewUser: true })
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useAccount({ env: CONFIGURED, storage: memoryStorage(), fetchImpl }));
+
+    await act(async () => {
+      await result.current.signInWithCredential('credential');
+    });
+
+    expect(result.current.isNewUser).toBe(true);
+  });
+
+  it('reports an existing account as returning', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ token: 't', user: { id: 'u1' }, isNewUser: false })
+    ) as unknown as typeof fetch;
+    const { result } = renderHook(() => useAccount({ env: CONFIGURED, storage: memoryStorage(), fetchImpl }));
+
+    await act(async () => {
+      await result.current.signInWithCredential('credential');
+    });
+
+    expect(result.current.isNewUser).toBe(false);
+  });
+
+  // An older API that does not send the flag must not make everyone look new.
+  it('treats a missing flag as returning', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ token: 't', user: { id: 'u1' } })) as unknown as typeof fetch;
+    const { result } = renderHook(() => useAccount({ env: CONFIGURED, storage: memoryStorage(), fetchImpl }));
+
+    await act(async () => {
+      await result.current.signInWithCredential('credential');
+    });
+
+    expect(result.current.isNewUser).toBe(false);
+  });
+
+  it('treats a restored session as returning', () => {
+    const storage = memoryStorage();
+    storage.setItem('striply-account', JSON.stringify({ token: 't', user: { id: 'u1' } }));
+    const { result } = renderHook(() => useAccount({ env: CONFIGURED, storage }));
+
+    expect(result.current.status).toBe('signed-in');
+    expect(result.current.isNewUser).toBe(false);
+  });
+});

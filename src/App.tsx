@@ -366,6 +366,7 @@ export default function App() {
               setShowStartScreen(false);
             }}
             onExploreApp={() => setShowStartScreen(false)}
+            isReturningUser={account.status === 'signed-in' && !account.isNewUser}
             onCreateRoom={() => {
               setShowStartScreen(false);
               setRemoteEntryMode('create');

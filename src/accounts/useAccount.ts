@@ -32,6 +32,9 @@ export function useAccount(options: UseAccountOptions = {}) {
   const [user, setUser] = useState<AccountUser | null>(stored.current?.user ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A restored session means they have signed in before, so a returning visitor
+  // by definition. Only a fresh sign-in can report a brand-new account.
+  const [isNewUser, setIsNewUser] = useState(false);
 
   const tokenRef = useRef(token);
   useEffect(() => {
@@ -67,6 +70,7 @@ export function useAccount(options: UseAccountOptions = {}) {
         tokenRef.current = result.token;
         setToken(result.token);
         setUser(result.user);
+        setIsNewUser(result.isNewUser === true);
         return true;
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Sign-in failed.');
@@ -84,6 +88,8 @@ export function useAccount(options: UseAccountOptions = {}) {
     status,
     config,
     user,
+    /** False for a returning visitor, which changes how the app greets them. */
+    isNewUser,
     api,
     busy,
     error,

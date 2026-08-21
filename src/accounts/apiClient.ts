@@ -80,13 +80,15 @@ export class AccountsApi {
     return response;
   }
 
-  async signInWithGoogle(credential: string): Promise<{ token: string; user: AccountUser }> {
+  async signInWithGoogle(
+    credential: string
+  ): Promise<{ token: string; user: AccountUser; isNewUser?: boolean }> {
     const response = await this.send(
       '/auth/google',
       { method: 'POST', body: JSON.stringify({ credential }) },
       false
     );
-    return (await response.json()) as { token: string; user: AccountUser };
+    return (await response.json()) as { token: string; user: AccountUser; isNewUser?: boolean };
   }
 
   async listStrips(): Promise<SavedStrip[]> {
