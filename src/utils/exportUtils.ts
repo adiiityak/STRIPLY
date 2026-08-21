@@ -213,8 +213,18 @@ async function waitForImages(element: HTMLElement): Promise<void> {
         // Resolve on error rather than reject: one unloadable image must not abort the whole
         // export and leave the user with no file at all.
         await new Promise<void>((resolve) => {
-          image.addEventListener('load', () => resolve(), { once: true });
-          image.addEventListener('error', () => resolve(), { once: true });
+          const finish = () => {
+            image.removeEventListener('load', finish);
+            image.removeEventListener('error', finish);
+            resolve();
+          };
+          image.addEventListener('load', finish, { once: true });
+          image.addEventListener('error', finish, { once: true });
+
+          // `complete` can flip after the check above but before these listeners are attached.
+          // In that cold-load race the load event has already been missed, so resolve from the
+          // current state instead of leaving mobile export pending forever.
+          if (image.complete) finish();
         });
       }
 

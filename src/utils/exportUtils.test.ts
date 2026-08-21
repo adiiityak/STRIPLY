@@ -113,6 +113,46 @@ describe('export image sizing', () => {
     expect(result.length).toBeGreaterThan(1_000);
   });
 
+  it('does not stall a cold export when an image finishes between the ready check and listener setup', async () => {
+    const element = document.createElement('div');
+    Object.defineProperty(element, 'clientWidth', { value: 280 });
+    Object.defineProperty(element, 'clientHeight', { value: 980 });
+    const image = document.createElement('img');
+    let completeReads = 0;
+    Object.defineProperty(image, 'complete', {
+      configurable: true,
+      get: () => {
+        completeReads += 1;
+        return completeReads > 1;
+      }
+    });
+    Object.defineProperty(image, 'decode', {
+      configurable: true,
+      value: vi.fn().mockResolvedValue(undefined)
+    });
+    element.appendChild(image);
+
+    const pixels = new Uint8ClampedArray([
+      255, 255, 255, 255,
+      255, 255, 255, 255,
+      0, 0, 0, 255,
+      0, 0, 0, 255
+    ]);
+    vi.mocked(html2canvas).mockResolvedValue({
+      width: 2,
+      height: 2,
+      getContext: () => ({ getImageData: () => ({ data: pixels }) }),
+      toDataURL: () => `data:image/png;base64,${'a'.repeat(2_000)}`
+    } as unknown as HTMLCanvasElement);
+
+    const outcome = await Promise.race([
+      exportUtils.exportStripToDataUrl(element, { scale: 1 }).then(() => 'exported'),
+      new Promise<string>((resolve) => setTimeout(() => resolve('stalled'), 50))
+    ]);
+
+    expect(outcome).toBe('exported');
+  });
+
   it('uses direct downloads on desktop even when the browser supports file sharing', () => {
     expect(sizing.shouldUseFileShareSheet?.(false)).toBe(false);
   });
