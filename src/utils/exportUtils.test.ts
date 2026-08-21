@@ -30,6 +30,21 @@ type ExportSizingApi = {
     sourceWidth: number,
     sourceHeight: number
   ) => { width: number; height: number };
+  getPhotoStripExportSize?: (dpi?: number) => {
+    width: number;
+    height: number;
+    widthInches: number;
+    heightInches: number;
+  };
+  getPdfLayout?: (layout: '2x6' | '4x6_double' | 'a4_grid') => {
+    unit: 'in' | 'mm';
+    page: { width: number; height: number } | 'a4';
+    placements: Array<{ x: number; y: number; width: number; height: number }>;
+  };
+  drawSocialShareComposition?: (
+    context: CanvasRenderingContext2D,
+    image: CanvasImageSource
+  ) => void;
 };
 
 const sizing = exportUtils as ExportSizingApi;
@@ -177,6 +192,26 @@ describe('export image sizing', () => {
       getContext: () => ({ getImageData: () => ({ data: pixels }) }),
       toDataURL: () => `data:image/png;base64,${'a'.repeat(2_000)}`
     } as unknown as HTMLCanvasElement);
+    class LoadedImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      naturalWidth = 810;
+      naturalHeight = 1800;
+      width = 810;
+      height = 1800;
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', LoadedImage);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+      set fillStyle(_value: string) {}
+    } as unknown as CanvasRenderingContext2D);
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(
+      `data:image/png;base64,${'b'.repeat(2_000)}`
+    );
 
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'canShare', {
@@ -215,5 +250,58 @@ describe('export image sizing', () => {
       width: 1600,
       height: 1200
     });
+  });
+
+  it('exports a single strip at 2.7 by 6 inches at print resolution', () => {
+    expect(sizing.getPhotoStripExportSize?.()).toEqual({
+      width: 810,
+      height: 1800,
+      widthInches: 2.7,
+      heightInches: 6
+    });
+  });
+
+  it('places every PDF strip at exactly 2.7 by 6 inches', () => {
+    expect(sizing.getPdfLayout?.('2x6')).toEqual({
+      unit: 'in',
+      page: { width: 2.7, height: 6 },
+      placements: [{ x: 0, y: 0, width: 2.7, height: 6 }]
+    });
+    expect(sizing.getPdfLayout?.('4x6_double')).toEqual({
+      unit: 'in',
+      page: { width: 5.4, height: 6 },
+      placements: [
+        { x: 0, y: 0, width: 2.7, height: 6 },
+        { x: 2.7, y: 0, width: 2.7, height: 6 }
+      ]
+    });
+
+    const a4 = sizing.getPdfLayout?.('a4_grid');
+    expect(a4?.placements).toHaveLength(3);
+    expect(a4?.placements.every(({ width, height }) => width === 68.58 && height === 152.4)).toBe(true);
+  });
+
+  it('draws two copies of the selected strip in the social image without promotional text', () => {
+    const drawImage = vi.fn();
+    const fillText = vi.fn();
+    const context = {
+      canvas: { width: 1080, height: 1920 },
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      drawImage,
+      fillRect: vi.fn(),
+      fillText,
+      set fillStyle(_value: string) {},
+      set shadowColor(_value: string) {},
+      set shadowBlur(_value: number) {},
+      set shadowOffsetY(_value: number) {}
+    } as unknown as CanvasRenderingContext2D;
+
+    sizing.drawSocialShareComposition?.(context, {} as CanvasImageSource);
+
+    expect(drawImage).toHaveBeenCalledTimes(2);
+    expect(fillText).not.toHaveBeenCalled();
   });
 });

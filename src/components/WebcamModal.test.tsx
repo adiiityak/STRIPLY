@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { WebcamModal } from './WebcamModal';
 
@@ -25,5 +25,29 @@ describe('WebcamModal remote layout', () => {
       'overflow-hidden',
       'lg:max-w-6xl'
     );
+  });
+
+  it('shows a pose suggestion before a solo photo series starts', async () => {
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue({
+          getTracks: () => []
+        })
+      }
+    });
+
+    render(
+      <WebcamModal
+        isOpen
+        onClose={vi.fn()}
+        onPhotosCaptured={vi.fn()}
+        onRemoteSessionComplete={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /solo booth/i }));
+
+    expect(await screen.findByText(/hands under your chin/i)).toBeInTheDocument();
   });
 });

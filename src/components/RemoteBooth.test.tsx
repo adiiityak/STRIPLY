@@ -87,6 +87,7 @@ describe('RemoteBoothView', () => {
 
     const control = screen.getByRole('button', { name: /taking photo 2 of 4/i });
     expect(control).toBeDisabled();
+    expect(screen.getByText(/make half a heart/i)).toBeInTheDocument();
   });
 
   it('shows two equal participant feed panels', () => {
@@ -109,7 +110,7 @@ describe('RemoteBoothView', () => {
         remoteVideoRef={{ current: null }}
       />
     );
-    expect(screen.getByTestId('remote-feed-grid').children).toHaveLength(2);
+    expect(screen.getByTestId('remote-feed-grid').querySelectorAll('video')).toHaveLength(2);
   });
 
   it('uses a compact mobile stack and moves controls beside the feed on desktop', () => {

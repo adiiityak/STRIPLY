@@ -421,8 +421,8 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'strip2x6', label: '2×6 Classic Strip' },
-                  { id: 'strip4x6', label: '4×6 Double Print' },
+                  { id: 'strip2x6', label: '2.7×6 Classic Strip' },
+                  { id: 'strip4x6', label: '5.4×6 Double Print' },
                   { id: 'igStory', label: 'Instagram Story (9:16)' },
                   { id: 'igPost', label: 'Instagram Post (Square)' },
                   { id: 'wallpaper', label: 'Phone Wallpaper' }
@@ -1617,7 +1617,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                   disabled={isExporting}
                   className="p-2.5 bg-white hover:bg-[#FFF5F5] border border-[#E8E6DF] text-[#2D2D2D] font-semibold rounded-xl text-left flex items-center justify-between transition-colors"
                 >
-                  <span>2×6 Cut Sheet PDF</span>
+                  <span>2.7×6 Cut Sheet PDF</span>
                   <FileText className="w-4 h-4 text-[#FF6B6B]" />
                 </button>
 
@@ -1626,7 +1626,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
                   disabled={isExporting}
                   className="p-2.5 bg-white hover:bg-[#FFF5F5] border border-[#E8E6DF] text-[#2D2D2D] font-semibold rounded-xl text-left flex items-center justify-between transition-colors"
                 >
-                  <span>4×6 Double Strip PDF (Print 2 Side-by-Side)</span>
+                  <span>5.4×6 Double Strip PDF (Two 2.7×6 Strips)</span>
                   <FileText className="w-4 h-4 text-[#FF6B6B]" />
                 </button>
 

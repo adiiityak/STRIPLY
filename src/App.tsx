@@ -11,7 +11,7 @@ import { StartScreen } from './components/StartScreen';
 import { PhotoItem, StripConfiguration, PlacedSticker } from './types';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
-import { downloadStripAsPNG, downloadStripAsPDF, exportStripToDataUrl } from './utils/exportUtils';
+import { downloadStripAsPNG, downloadStripAsPDF, exportSocialShareToDataUrl } from './utils/exportUtils';
 import { useCanvasPan } from './hooks/useCanvasPan';
 import { optimisePhotoFile } from './utils/photoImport';
 import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -245,16 +245,18 @@ export default function App() {
   return (
     <div className="app-shell overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
       {/* Top Header */}
-      <Header
-        onOpenWebcam={() => {
-          setRemoteEntryMode(undefined);
-          setIsWebcamOpen(true);
-        }}
-        onShuffleLayout={handleShuffleLayout}
-        onQuickExportPNG={handleExportPNG}
-        onOpenShareModal={() => setIsShareModalOpen(true)}
-        isExporting={isExporting}
-      />
+      {!showStartScreen && (
+        <Header
+          onOpenWebcam={() => {
+            setRemoteEntryMode(undefined);
+            setIsWebcamOpen(true);
+          }}
+          onShuffleLayout={handleShuffleLayout}
+          onQuickExportPNG={handleExportPNG}
+          onOpenShareModal={() => setIsShareModalOpen(true)}
+          isExporting={isExporting}
+        />
+      )}
 
       {/* Main Workspace Area */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
@@ -382,7 +384,7 @@ export default function App() {
         config={config}
         onExportPNG={async () => {
           if (!canvasRef.current) return null;
-          return await exportStripToDataUrl(canvasRef.current);
+          return await exportSocialShareToDataUrl(canvasRef.current);
         }}
       />
 

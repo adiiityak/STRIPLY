@@ -4,6 +4,60 @@ import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
 import { inlineOklchFallbacks } from './oklch';
 
+const STRIP_WIDTH_INCHES = 2.7;
+const STRIP_HEIGHT_INCHES = 6;
+const PRINT_DPI = 300;
+
+export function getPhotoStripExportSize(dpi: number = PRINT_DPI) {
+  return {
+    width: Math.round(STRIP_WIDTH_INCHES * dpi),
+    height: Math.round(STRIP_HEIGHT_INCHES * dpi),
+    widthInches: STRIP_WIDTH_INCHES,
+    heightInches: STRIP_HEIGHT_INCHES
+  };
+}
+
+type PdfLayoutType = '2x6' | '4x6_double' | 'a4_grid';
+
+export function getPdfLayout(layout: PdfLayoutType): {
+  unit: 'in' | 'mm';
+  page: { width: number; height: number } | 'a4';
+  placements: Array<{ x: number; y: number; width: number; height: number }>;
+} {
+  if (layout === '2x6') {
+    return {
+      unit: 'in',
+      page: { width: 2.7, height: 6 },
+      placements: [{ x: 0, y: 0, width: 2.7, height: 6 }]
+    };
+  }
+
+  if (layout === '4x6_double') {
+    return {
+      unit: 'in',
+      page: { width: 5.4, height: 6 },
+      placements: [
+        { x: 0, y: 0, width: 2.7, height: 6 },
+        { x: 2.7, y: 0, width: 2.7, height: 6 }
+      ]
+    };
+  }
+
+  const stripWidthMm = 68.58;
+  const stripHeightMm = 152.4;
+  const startX = 2.13;
+  return {
+    unit: 'mm',
+    page: 'a4',
+    placements: Array.from({ length: 3 }, (_, index) => ({
+      x: Number((startX + index * stripWidthMm).toFixed(2)),
+      y: 15,
+      width: stripWidthMm,
+      height: stripHeightMm
+    }))
+  };
+}
+
 export function constrainImageDimensions(
   width: number,
   height: number,
@@ -314,6 +368,77 @@ export async function exportStripToDataUrl(
   return renderStripToPng(element, scale, options.transparent);
 }
 
+function loadDataUrlImage(dataUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('The rendered strip could not be prepared.'));
+    image.src = dataUrl;
+  });
+}
+
+async function normalisePhotoStripDataUrl(dataUrl: string): Promise<string> {
+  const image = await loadDataUrlImage(dataUrl);
+  const size = getPhotoStripExportSize();
+  const canvas = document.createElement('canvas');
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('The photo strip export canvas is unavailable.');
+
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, size.width, size.height);
+  const placement = fitImageWithin(
+    image.naturalWidth || image.width,
+    image.naturalHeight || image.height,
+    { x: 0, y: 0, width: size.width, height: size.height }
+  );
+  context.drawImage(image, placement.x, placement.y, placement.width, placement.height);
+  return canvas.toDataURL('image/png');
+}
+
+export function drawSocialShareComposition(
+  context: CanvasRenderingContext2D,
+  image: CanvasImageSource
+): void {
+  const { width, height } = context.canvas;
+  context.fillStyle = '#e9f2ff';
+  context.fillRect(0, 0, width, height);
+
+  const stripWidth = width * 0.43;
+  const stripHeight = stripWidth * (STRIP_HEIGHT_INCHES / STRIP_WIDTH_INCHES);
+  const placements = [
+    { x: width * 0.36, y: height * 0.51, rotation: -6 },
+    { x: width * 0.64, y: height * 0.51, rotation: 6 }
+  ];
+
+  placements.forEach(({ x, y, rotation }) => {
+    context.save();
+    context.translate(x, y);
+    context.rotate((rotation * Math.PI) / 180);
+    context.shadowColor = 'rgba(26, 49, 83, 0.24)';
+    context.shadowBlur = 28;
+    context.shadowOffsetY = 18;
+    context.fillStyle = '#ffffff';
+    context.fillRect(-stripWidth / 2 - 10, -stripHeight / 2 - 10, stripWidth + 20, stripHeight + 20);
+    context.drawImage(image, -stripWidth / 2, -stripHeight / 2, stripWidth, stripHeight);
+    context.restore();
+  });
+}
+
+export async function exportSocialShareToDataUrl(element: HTMLElement): Promise<string> {
+  const renderedStrip = await renderStripToPng(element, 2.5);
+  const normalisedStrip = await normalisePhotoStripDataUrl(renderedStrip);
+  const image = await loadDataUrlImage(normalisedStrip);
+  const canvas = document.createElement('canvas');
+  canvas.width = 1080;
+  canvas.height = 1920;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('The social share canvas is unavailable.');
+  drawSocialShareComposition(context, image);
+  return canvas.toDataURL('image/png');
+}
+
 export async function downloadStripAsPNG(
   element: HTMLElement,
   filename: string = 'striply-photo-strip.png',
@@ -322,7 +447,8 @@ export async function downloadStripAsPNG(
   try {
     const scale = options.scale || 2.5;
 
-    const dataUrl = await renderStripToPng(element, scale, options.transparent);
+    const renderedStrip = await renderStripToPng(element, scale, options.transparent);
+    const dataUrl = await normalisePhotoStripDataUrl(renderedStrip);
     // Export is a download action on every device. Calling navigator.share only after the
     // asynchronous cold render loses mobile browsers' transient user activation and can leave
     // the share promise (and the Export spinner) pending. Sharing remains available through the
@@ -352,98 +478,30 @@ const STRIP_ALIAS = 'striply-strip';
 export async function downloadStripAsPDF(
   element: HTMLElement,
   filename: string = 'striply-photo-strip.pdf',
-  layoutType: '2x6' | '4x6_double' | 'a4_grid' = '2x6'
+  layoutType: PdfLayoutType = '2x6'
 ) {
   try {
-    const sourceWidth = element.clientWidth;
-    const sourceHeight = element.clientHeight;
-    const dataUrl = await renderStripToPng(element, 2.5);
+    const renderedStrip = await renderStripToPng(element, 2.5);
+    const dataUrl = await normalisePhotoStripDataUrl(renderedStrip);
+    const layout = getPdfLayout(layoutType);
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: layout.unit,
+      format: layout.page === 'a4' ? 'a4' : [layout.page.width, layout.page.height]
+    });
 
-    let pdf: jsPDF;
-
-    if (layoutType === '2x6') {
-      // 2x6 inches = 50.8mm x 152.4mm
-      pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'in',
-        format: [2, 6]
-      });
-
-      const placement = fitImageWithin(sourceWidth, sourceHeight, {
-        x: 0,
-        y: 0,
-        width: 2,
-        height: 6
-      });
-      pdf.addImage(dataUrl, 'PNG', placement.x, placement.y, placement.width, placement.height, STRIP_ALIAS, 'FAST');
-    } else if (layoutType === '4x6_double') {
-      // 4x6 inches = print 2 strips side-by-side
-      pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'in',
-        format: [4, 6]
-      });
-
-      const leftPlacement = fitImageWithin(sourceWidth, sourceHeight, {
-        x: 0.1,
-        y: 0.1,
-        width: 1.85,
-        height: 5.8
-      });
-      const rightPlacement = fitImageWithin(sourceWidth, sourceHeight, {
-        x: 2.05,
-        y: 0.1,
-        width: 1.85,
-        height: 5.8
-      });
+    layout.placements.forEach((placement) => {
       pdf.addImage(
         dataUrl,
         'PNG',
-        leftPlacement.x,
-        leftPlacement.y,
-        leftPlacement.width,
-        leftPlacement.height,
+        placement.x,
+        placement.y,
+        placement.width,
+        placement.height,
         STRIP_ALIAS,
         'FAST'
       );
-      pdf.addImage(
-        dataUrl,
-        'PNG',
-        rightPlacement.x,
-        rightPlacement.y,
-        rightPlacement.width,
-        rightPlacement.height,
-        STRIP_ALIAS,
-        'FAST'
-      );
-    } else {
-      // A4 grid (8.27 x 11.69 inches)
-      pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      // Render 3 strips side by side on A4 without stretching their template proportions.
-      [15, 77, 139].forEach((x) => {
-        const placement = fitImageWithin(sourceWidth, sourceHeight, {
-          x,
-          y: 15,
-          width: 55,
-          height: 165
-        });
-        pdf.addImage(
-          dataUrl,
-          'PNG',
-          placement.x,
-          placement.y,
-          placement.width,
-          placement.height,
-          STRIP_ALIAS,
-          'FAST'
-        );
-      });
-    }
+    });
 
     const pdfArrayBuffer = pdf.output('arraybuffer');
     const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });

@@ -7,6 +7,7 @@ import { CountdownOverlay } from './CountdownOverlay';
 import { BackgroundPicker } from './BackgroundPicker';
 import { useLiveBackground } from '../remote/useLiveBackground';
 import type { SharedBackground } from '../remote/types';
+import { getPoseSuggestion } from '../utils/poseSuggestions';
 
 const MAX_CAPTURE_DIMENSION = 1280;
 
@@ -281,6 +282,11 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
 
           {/* Countdown Overlay */}
           <CountdownOverlay value={countdown} />
+
+          <div className="absolute bottom-3 left-1/2 z-20 max-w-[80%] -translate-x-1/2 rounded-full bg-black/65 px-4 py-2 text-center text-xs font-semibold text-white backdrop-blur-sm">
+            <span className="mr-1 text-[10px] uppercase tracking-widest text-white/70">Try</span>
+            {getPoseSuggestion(capturedPhotos.length)}
+          </div>
 
           {/* Target Count Indicator Badge */}
           <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#2D2D2D] border border-[#E8E6DF] flex items-center gap-1.5 z-20 shadow-sm">
