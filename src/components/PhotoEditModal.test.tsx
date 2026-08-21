@@ -25,6 +25,17 @@ function renderModal(onSave = vi.fn()) {
 }
 
 describe('PhotoEditModal', () => {
+  it('keeps the close control visible while the settings content scrolls on phones', () => {
+    renderModal();
+
+    const dialog = screen.getByRole('dialog', { name: /adjust photo/i });
+    const controls = screen.getByTestId('photo-edit-scroll-area');
+
+    expect(dialog).toHaveClass('h-[100dvh]', 'overflow-hidden');
+    expect(controls).toHaveClass('min-h-0', 'overflow-y-auto');
+    expect(screen.getByRole('button', { name: /close photo controls/i })).toBeVisible();
+  });
+
   // The modal only ever offered vertical adjustment, so a photo framed too far
   // left or right could not be corrected at all.
   it('adjusts the photo horizontally as well as vertically', () => {

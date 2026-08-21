@@ -56,21 +56,30 @@ export const PhotoEditModal: React.FC<PhotoEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white border border-[#E8E6DF] rounded-3xl max-w-md w-full p-5 text-[#2D2D2D] shadow-2xl relative flex flex-col">
+    <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-stretch sm:items-center justify-center p-0 sm:p-4 overflow-hidden animate-in fade-in duration-200">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="photo-edit-title"
+        className="bg-white border border-[#E8E6DF] rounded-none sm:rounded-3xl max-w-md w-full h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-2rem)] text-[#2D2D2D] shadow-2xl relative flex flex-col overflow-hidden"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#E8E6DF]">
-          <h3 className="font-bold text-base text-[#2D2D2D] flex items-center gap-2">
+        <div className="flex-none flex items-center justify-between px-5 py-4 border-b border-[#E8E6DF] bg-white">
+          <h3 id="photo-edit-title" className="font-bold text-base text-[#2D2D2D] flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-[#FF6B6B]" />
             <span>Adjust Photo</span>
           </h3>
           <button
+            type="button"
+            aria-label="Close photo controls"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-[#FAF9F6] hover:bg-[#E8E6DF] text-[#666666] hover:text-[#2D2D2D] flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        <div data-testid="photo-edit-scroll-area" className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 pb-5">
 
         {/* Live Preview Frame */}
         <div
@@ -239,6 +248,7 @@ export const PhotoEditModal: React.FC<PhotoEditModalProps> = ({
               <span>Apply Changes</span>
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>
