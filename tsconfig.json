@@ -22,5 +22,9 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  // The Worker is typechecked separately by worker/tsconfig.json against
+  // Cloudflare's globals, which are incompatible with the DOM ones this app
+  // needs. Compiling both in one programme breaks the frontend's types.
+  "exclude": ["worker", "node_modules", "dist"]
 }

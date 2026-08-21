@@ -1,0 +1,19 @@
+name = "striply-api"
+main = "worker/index.ts"
+compatibility_date = "2026-08-01"
+
+# Public, and must match the frontend's VITE_GOOGLE_CLIENT_ID.
+# SESSION_SECRET is a secret, not a var: set it with
+#   wrangler secret put SESSION_SECRET
+[vars]
+GOOGLE_CLIENT_ID = "957614887578-5k9fgqgtlhlctkfflr5pnlb8h0oorv75.apps.googleusercontent.com"
+ALLOWED_ORIGINS = "http://localhost:3000,https://striply-psi.vercel.app"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "striply"
+database_id = "571bfab4-9564-43ce-8cac-d79fc10ffcb1"
+
+[[r2_buckets]]
+binding = "STRIPS"
+bucket_name = "striply-strips"
