@@ -208,4 +208,25 @@ describe('the API, against real D1 and R2', () => {
   it('404s an unknown route', async () => {
     expect((await request('/nope', { token: await tokenFor('user-a') })).status).toBe(404);
   });
+
+  // A missing table once escaped as a runtime 500 with no CORS headers, which the
+  // browser reported as "Failed to fetch" -- hiding the status and making a
+  // database problem look like a network one.
+  it('answers an unexpected failure with a CORS-bearing 500', async () => {
+    const db = await mf.getD1Database('DB');
+    await db.prepare('DROP TABLE strips').run();
+    try {
+      const response = await request('/strips', { token: await tokenFor('user-a') });
+      expect(response.status).toBe(500);
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe(ORIGIN);
+      expect(((await response.json()) as { error: string }).error).toMatch(/our side/i);
+    } finally {
+      // Restore for any test that runs after this one.
+      await db
+        .prepare(
+          'CREATE TABLE strips (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, r2_key TEXT NOT NULL, template_id TEXT, layout TEXT, width INTEGER, height INTEGER, bytes INTEGER NOT NULL, created_at INTEGER NOT NULL)'
+        )
+        .run();
+    }
+  });
 });

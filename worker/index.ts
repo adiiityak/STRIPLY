@@ -45,8 +45,24 @@ function saveFailureResponse(reason: string, headers: Record<string, string>) {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
     const headers = corsHeaders(request.headers.get('Origin'), env.ALLOWED_ORIGINS ?? '');
+    try {
+      return await handle(request, env, headers);
+    } catch (error) {
+      // An escaping exception becomes a runtime-generated 500 with no CORS
+      // headers, so the browser reports it as "Failed to fetch" and hides the
+      // status entirely -- which is how a missing database table presented as a
+      // network problem. Answer with our own 500, carrying CORS, and log the
+      // cause for the worker tail.
+      console.error('Unhandled API error:', error);
+      return json({ error: 'Something went wrong on our side.' }, 500, headers);
+    }
+  }
+};
+
+async function handle(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+  {
+    const url = new URL(request.url);
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
@@ -129,4 +145,4 @@ export default {
 
     return json({ error: 'Not found.' }, 404, headers);
   }
-};
+}
