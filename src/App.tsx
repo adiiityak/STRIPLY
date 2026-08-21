@@ -7,6 +7,8 @@ import { ControlsPanel } from './components/ControlsPanel';
 import { WebcamModal } from './components/WebcamModal';
 import { PhotoEditModal } from './components/PhotoEditModal';
 import { StartScreen } from './components/StartScreen';
+import { SavedStripsModal } from './components/SavedStripsModal';
+import { useAccount } from './accounts/useAccount';
 import { PhotoItem, StripConfiguration, PlacedSticker } from './types';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
@@ -14,7 +16,8 @@ import {
   downloadStripAsPNG,
   downloadStripAsPDF,
   exportSocialShareToDataUrl,
-  shareSocialImageDataUrl
+  shareSocialImageDataUrl,
+  exportStripToDataUrl
 } from './utils/exportUtils';
 import { useCanvasPan } from './hooks/useCanvasPan';
 import { optimisePhotoFile } from './utils/photoImport';
@@ -33,6 +36,12 @@ export default function App() {
 
   // Canvas ref for html-to-image exports
   const canvasRef = useRef<HTMLDivElement | null>(null);
+
+  // Accounts and saved strips. Reports 'unconfigured' unless this deployment has
+  // both an API base URL and a Google client id, in which case none of the
+  // account UI is rendered at all.
+  const account = useAccount();
+  const [isSavedStripsOpen, setIsSavedStripsOpen] = useState(false);
 
   // Drag-to-pan the strip. The scroll container is <main>; anything marked data-no-pan
   // (the zoom toolbar, the sticker layer) keeps its own gestures.
@@ -310,6 +319,10 @@ export default function App() {
           onQuickExportPNG={handleExportPNG}
           onOpenShareModal={handleShareSocial}
           isExporting={isExporting}
+          onOpenSavedStrips={
+            account.status === 'unconfigured' ? undefined : () => setIsSavedStripsOpen(true)
+          }
+          accountPicture={account.user?.picture}
         />
       )}
 
@@ -446,6 +459,23 @@ export default function App() {
           showToast('Photo removed.');
         }}
       />
+
+      {/* Saved strips. Rendered only when this deployment has accounts. */}
+      {account.status !== 'unconfigured' && (
+        <SavedStripsModal
+          account={account}
+          isOpen={isSavedStripsOpen}
+          onClose={() => setIsSavedStripsOpen(false)}
+          templateId={config.style}
+          layout={config.photoLayout}
+          onRequestCurrentStrip={async () => {
+            if (photos.length === 0 || !canvasRef.current) return null;
+            // Reuses the existing export path, so a saved strip is byte-for-byte
+            // what Export produces.
+            return exportStripToDataUrl(canvasRef.current);
+          }}
+        />
+      )}
 
       {/* Floating Toast Notification */}
       {toast && (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Shuffle, Download, Video, RefreshCw, Share2 } from 'lucide-react';
+import { Camera, Shuffle, Download, Video, RefreshCw, Share2, BookmarkPlus } from 'lucide-react';
 
 interface HeaderProps {
   onOpenWebcam: () => void;
@@ -7,6 +7,9 @@ interface HeaderProps {
   onQuickExportPNG: () => void;
   onOpenShareModal: () => void;
   isExporting: boolean;
+  /** Omitted entirely when accounts are not configured for this deployment. */
+  onOpenSavedStrips?: () => void;
+  accountPicture?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -14,7 +17,9 @@ export const Header: React.FC<HeaderProps> = ({
   onShuffleLayout,
   onQuickExportPNG,
   onOpenShareModal,
-  isExporting
+  isExporting,
+  onOpenSavedStrips,
+  accountPicture
 }) => {
   return (
     <header className="bg-white/95 backdrop-blur-md border-b border-[#E8E6DF] text-[#2D2D2D] sticky top-0 z-40 px-3 py-2 lg:px-4 lg:py-3 shadow-xs shrink-0">
@@ -62,6 +67,23 @@ export const Header: React.FC<HeaderProps> = ({
             <Shuffle className="w-3.5 h-3.5 text-[#4ECDC4]" />
             <span className="hidden sm:inline">Shuffle</span>
           </button>
+
+          {/* Saved strips. Absent unless this deployment has accounts configured. */}
+          {onOpenSavedStrips && (
+            <button
+              onClick={onOpenSavedStrips}
+              className="px-3.5 py-2.5 lg:py-2 rounded-xl bg-[#FAF9F6] hover:bg-[#F0EEE9] text-[#2D2D2D] text-xs font-semibold border border-[#E8E6DF] transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+              title="My saved strips"
+              aria-label="My strips"
+            >
+              {accountPicture ? (
+                <img src={accountPicture} alt="" className="w-4 h-4 rounded-full" />
+              ) : (
+                <BookmarkPlus className="w-3.5 h-3.5 text-[#FF6B6B]" />
+              )}
+              <span className="hidden sm:inline">My strips</span>
+            </button>
+          )}
 
           {/* Direct Social Share Button */}
           <button
