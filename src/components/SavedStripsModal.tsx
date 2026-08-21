@@ -85,6 +85,9 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
       clientId: account.config.googleClientId,
       onCredential: (credential) => {
         if (!cancelled) void account.signInWithCredential(credential);
+      },
+      onError: (reason) => {
+        if (!cancelled) setMessage(reason);
       }
     }).catch(() => setMessage('Google sign-in could not be loaded.'));
     return () => {

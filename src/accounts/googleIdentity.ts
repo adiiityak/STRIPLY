@@ -3,7 +3,13 @@ const GSI_SRC = 'https://accounts.google.com/gsi/client';
 interface GoogleIdentity {
   accounts: {
     id: {
-      initialize(options: { client_id: string; callback: (response: { credential?: string }) => void }): void;
+      initialize(options: {
+        client_id: string;
+        callback: (response: { credential?: string }) => void;
+        error_callback?: (error: { type?: string; message?: string }) => void;
+        use_fedcm_for_button?: boolean;
+        use_fedcm_for_prompt?: boolean;
+      }): void;
       renderButton(parent: HTMLElement, options: Record<string, unknown>): void;
       disableAutoSelect(): void;
     };
@@ -55,16 +61,48 @@ export interface RenderSignInOptions {
   parent: HTMLElement;
   clientId: string;
   onCredential: (credential: string) => void;
+  /** Reports a failure Google would otherwise swallow. */
+  onError?: (message: string) => void;
+}
+
+/**
+ * Human-readable reason for a failed sign-in attempt.
+ *
+ * Google reports these through error_callback and otherwise does nothing visible,
+ * so without translating them a blocked sign-in looks like a dead button.
+ */
+export function describeSignInError(type: string | undefined): string {
+  switch (type) {
+    case 'popup_closed':
+      return 'Sign-in was closed before it finished. Try again.';
+    case 'popup_failed_to_open':
+      return 'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.';
+    default:
+      return 'Your browser blocked Google sign-in. Try an incognito window, or allow third-party sign-in for this site.';
+  }
 }
 
 /** Renders Google's own sign-in button, which is required by their terms. */
-export async function renderGoogleSignIn({ parent, clientId, onCredential }: RenderSignInOptions): Promise<void> {
+export async function renderGoogleSignIn({
+  parent,
+  clientId,
+  onCredential,
+  onError
+}: RenderSignInOptions): Promise<void> {
   const google = await loadGoogleIdentity();
   google.accounts.id.initialize({
     client_id: clientId,
     callback: (response) => {
       if (response.credential) onCredential(response.credential);
-    }
+      else onError?.(describeSignInError(undefined));
+    },
+    error_callback: (error) => onError?.(describeSignInError(error?.type)),
+    // Chrome's FedCM button flow fails silently in a profile where the browser
+    // has suppressed third-party sign-in -- the click produces no credential, no
+    // error and no network request. Google documents this opt-out; it is
+    // temporary on their roadmap, so revisit when FedCM becomes mandatory.
+    use_fedcm_for_button: false,
+    use_fedcm_for_prompt: false
   });
   google.accounts.id.renderButton(parent, {
     theme: 'outline',
