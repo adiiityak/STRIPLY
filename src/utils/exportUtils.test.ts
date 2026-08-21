@@ -45,6 +45,10 @@ type ExportSizingApi = {
     context: CanvasRenderingContext2D,
     image: CanvasImageSource
   ) => void;
+  shareSocialImageDataUrl?: (
+    dataUrl: string,
+    filename?: string
+  ) => Promise<'shared' | 'downloaded' | 'cancelled'>;
 };
 
 const sizing = exportUtils as ExportSizingApi;
@@ -283,6 +287,7 @@ describe('export image sizing', () => {
 
   it('draws two copies of the selected strip in the social image without promotional text', () => {
     const drawImage = vi.fn();
+    const fillRect = vi.fn();
     const fillText = vi.fn();
     const context = {
       canvas: { width: 1080, height: 1920 },
@@ -291,7 +296,7 @@ describe('export image sizing', () => {
       translate: vi.fn(),
       rotate: vi.fn(),
       drawImage,
-      fillRect: vi.fn(),
+      fillRect,
       fillText,
       set fillStyle(_value: string) {},
       set shadowColor(_value: string) {},
@@ -302,6 +307,28 @@ describe('export image sizing', () => {
     sizing.drawSocialShareComposition?.(context, {} as CanvasImageSource);
 
     expect(drawImage).toHaveBeenCalledTimes(2);
+    expect(fillRect).toHaveBeenCalledTimes(1);
     expect(fillText).not.toHaveBeenCalled();
+  });
+
+  it('shares only the generated strip image through the native system sheet', async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'canShare', {
+      configurable: true,
+      value: vi.fn(() => true)
+    });
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share });
+
+    const result = await sizing.shareSocialImageDataUrl?.(
+      'data:image/png;base64,QQ==',
+      'striply-social.png'
+    );
+
+    expect(result).toBe('shared');
+    expect(share).toHaveBeenCalledOnce();
+    const payload = share.mock.calls[0][0];
+    expect(payload.files).toHaveLength(1);
+    expect(payload).not.toHaveProperty('text');
+    expect(payload).not.toHaveProperty('url');
   });
 });

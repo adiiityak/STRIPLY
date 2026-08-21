@@ -6,12 +6,16 @@ import { StripCanvas } from './components/StripCanvas';
 import { ControlsPanel } from './components/ControlsPanel';
 import { WebcamModal } from './components/WebcamModal';
 import { PhotoEditModal } from './components/PhotoEditModal';
-import { ShareModal } from './components/ShareModal';
 import { StartScreen } from './components/StartScreen';
 import { PhotoItem, StripConfiguration, PlacedSticker } from './types';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
 import { autoCropPhoto, autoArrangePhotos } from './utils/smartCropUtils';
-import { downloadStripAsPNG, downloadStripAsPDF, exportSocialShareToDataUrl } from './utils/exportUtils';
+import {
+  downloadStripAsPNG,
+  downloadStripAsPDF,
+  exportSocialShareToDataUrl,
+  shareSocialImageDataUrl
+} from './utils/exportUtils';
 import { useCanvasPan } from './hooks/useCanvasPan';
 import { optimisePhotoFile } from './utils/photoImport';
 import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -53,9 +57,10 @@ export default function App() {
   const [remoteEntryMode, setRemoteEntryMode] = useState<'create' | 'join' | undefined>();
   // A visit begins on the start screen: capture, upload, or skip into the editor.
   const [showStartScreen, setShowStartScreen] = useState<boolean>(true);
-  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [editingPhoto, setEditingPhoto] = useState<PhotoItem | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const socialSharePreviewRef = useRef<string | null>(null);
+  const socialShareRenderRef = useRef<Promise<string> | null>(null);
 
   useEffect(() => {
     if (!new URLSearchParams(location.search).has('room')) return;
@@ -240,6 +245,56 @@ export default function App() {
     }
   };
 
+  // Prepare the share image while the user edits. Mobile browsers require navigator.share()
+  // to run directly from a tap; caching the expensive canvas render preserves that gesture.
+  useEffect(() => {
+    socialSharePreviewRef.current = null;
+    socialShareRenderRef.current = null;
+    if (showStartScreen) return;
+
+    const timer = window.setTimeout(() => {
+      const element = canvasRef.current;
+      if (!element) return;
+      const render = exportSocialShareToDataUrl(element);
+      socialShareRenderRef.current = render;
+      render
+        .then((dataUrl) => {
+          if (socialShareRenderRef.current === render) socialSharePreviewRef.current = dataUrl;
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (socialShareRenderRef.current === render) socialShareRenderRef.current = null;
+        });
+    }, 650);
+
+    return () => window.clearTimeout(timer);
+  }, [showStartScreen, photos, config]);
+
+  const handleShareSocial = async () => {
+    if (!canvasRef.current) return;
+
+    try {
+      let dataUrl = socialSharePreviewRef.current;
+      if (!dataUrl) {
+        dataUrl = socialShareRenderRef.current
+          ? await socialShareRenderRef.current
+          : await exportSocialShareToDataUrl(canvasRef.current);
+        socialSharePreviewRef.current = dataUrl;
+      }
+
+      const result = await shareSocialImageDataUrl(
+        dataUrl,
+        `striply-social-${Date.now()}.png`
+      );
+      if (result === 'downloaded') {
+        showToast('Sharing is unavailable here, so the image was downloaded instead.');
+      }
+    } catch (error) {
+      console.error('Failed to share photo strip:', error);
+      showToast('Failed to prepare the social image. Please try again.');
+    }
+  };
+
   // The shell is exactly one viewport tall at every width: the canvas and the controls
   // sheet each scroll internally, so the page itself never scrolls.
   return (
@@ -253,7 +308,7 @@ export default function App() {
           }}
           onShuffleLayout={handleShuffleLayout}
           onQuickExportPNG={handleExportPNG}
-          onOpenShareModal={() => setIsShareModalOpen(true)}
+          onOpenShareModal={handleShareSocial}
           isExporting={isExporting}
         />
       )}
@@ -363,7 +418,7 @@ export default function App() {
           onAddSticker={handleAddSticker}
           onExportPNG={handleExportPNG}
           onExportPDF={handleExportPDF}
-          onOpenShareModal={() => setIsShareModalOpen(true)}
+          onOpenShareModal={handleShareSocial}
           isExporting={isExporting}
         />
       </div>
@@ -375,17 +430,6 @@ export default function App() {
         onPhotosCaptured={handleWebcamPhotosCaptured}
         onRemoteSessionComplete={handleRemoteSessionComplete}
         initialRemoteAction={remoteEntryMode}
-      />
-
-      {/* Social Media & Link Direct Sharing Modal */}
-      <ShareModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        config={config}
-        onExportPNG={async () => {
-          if (!canvasRef.current) return null;
-          return await exportSocialShareToDataUrl(canvasRef.current);
-        }}
       />
 
       {/* Individual Photo Adjustment Modal */}

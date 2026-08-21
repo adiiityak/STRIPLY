@@ -258,6 +258,38 @@ function saveDataUrl(dataUrl: string, filename: string): void {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
 }
 
+export async function shareSocialImageDataUrl(
+  dataUrl: string,
+  filename: string = 'striply-social.png'
+): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const blob = dataUrlToBlob(dataUrl);
+  const file = new File([blob], filename, { type: blob.type || 'image/png' });
+  const sharePayload: ShareData = {
+    title: 'Striply Photo Strip',
+    files: [file]
+  };
+
+  const canShareFiles =
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    (typeof navigator.canShare !== 'function' || navigator.canShare(sharePayload));
+
+  if (canShareFiles) {
+    try {
+      // Supplying only the image file lets iOS and Android present each app's full
+      // destination chooser (for example Instagram Post, Story, or Reel).
+      await navigator.share(sharePayload);
+      return 'shared';
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+      console.warn('Native sharing failed; downloading the social image instead.', error);
+    }
+  }
+
+  saveDataUrl(dataUrl, filename);
+  return 'downloaded';
+}
+
 async function waitForImages(element: HTMLElement): Promise<void> {
   const images = Array.from(element.querySelectorAll('img'));
 
@@ -419,8 +451,6 @@ export function drawSocialShareComposition(
     context.shadowColor = 'rgba(26, 49, 83, 0.24)';
     context.shadowBlur = 28;
     context.shadowOffsetY = 18;
-    context.fillStyle = '#ffffff';
-    context.fillRect(-stripWidth / 2 - 10, -stripHeight / 2 - 10, stripWidth + 20, stripHeight + 20);
     context.drawImage(image, -stripWidth / 2, -stripHeight / 2, stripWidth, stripHeight);
     context.restore();
   });

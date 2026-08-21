@@ -301,7 +301,7 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
     <div
       id="controls-panel"
       style={{ '--panel-w': `${effectiveWidth}px` } as React.CSSProperties}
-      className="relative bg-white text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-[54vh] lg:h-full overflow-hidden rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] lg:rounded-none lg:shadow-none lg:border-l lg:border-[#E8E6DF]"
+      className="relative bg-white text-[#2D2D2D] w-full lg:w-[var(--panel-w)] shrink-0 flex flex-col lg:flex-row h-[46dvh] lg:h-full overflow-hidden rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] lg:rounded-none lg:shadow-none lg:border-l lg:border-[#E8E6DF]"
     >
       {/* Sheet grab handle — visual affordance only, matching the reference UI. */}
       <div className="lg:hidden shrink-0 flex justify-center pt-2 pb-1" aria-hidden="true">
@@ -1589,20 +1589,20 @@ export const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </button>
             </div>
 
-            {/* Social Share Card */}
+            {/* Native Social Share Card */}
             <div className="p-4 bg-[#FFF5F5] border border-[#FF6B6B]/20 rounded-2xl space-y-3">
               <div className="font-bold text-[#FF6B6B] flex items-center gap-1.5">
                 <Share2 className="w-4 h-4 text-[#FF6B6B]" />
-                <span>2. Direct Social Sharing & Links</span>
+                <span>2. Share on Social Media</span>
               </div>
-              <p className="text-[#666666] text-[11px]">Instantly post to Instagram, Twitter/X, Facebook, WhatsApp, or copy a shareable link.</p>
+              <p className="text-[#666666] text-[11px]">Open your phone&apos;s share sheet to choose Instagram Post, Story, Reel, or another app.</p>
 
               <button
                 onClick={onOpenShareModal}
                 className="w-full py-3 bg-[#FF6B6B] hover:bg-[#ff5252] text-white font-bold rounded-full shadow-md flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer text-xs"
               >
                 <Share2 className="w-4 h-4" />
-                <span>Open Social Share Sheet</span>
+                <span>Share on Social Media</span>
               </button>
             </div>
 

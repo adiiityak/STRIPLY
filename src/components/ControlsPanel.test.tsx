@@ -99,4 +99,33 @@ describe('ControlsPanel template selection', () => {
       })
     );
   });
+
+  it('uses a shorter mobile sheet and exposes one direct social share action', () => {
+    const onOpenShareModal = vi.fn();
+    const { container } = render(
+      <ControlsPanel
+        photos={[]}
+        config={airmail.config}
+        onChangeConfig={vi.fn()}
+        onUploadPhotos={vi.fn()}
+        onReorderPhotos={vi.fn()}
+        onRemovePhoto={vi.fn()}
+        onOpenWebcam={vi.fn()}
+        onAutoCropFaces={vi.fn()}
+        onAutoArrange={vi.fn()}
+        onAddSticker={vi.fn()}
+        onExportPNG={vi.fn()}
+        onExportPDF={vi.fn()}
+        onOpenShareModal={onOpenShareModal}
+        isExporting={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: /export/i }));
+    fireEvent.click(screen.getByRole('button', { name: /share on social media/i }));
+
+    expect(onOpenShareModal).toHaveBeenCalledOnce();
+    expect(container.querySelector('#controls-panel')).toHaveClass('h-[46dvh]');
+    expect(screen.queryByText(/direct social media/i)).not.toBeInTheDocument();
+  });
 });
