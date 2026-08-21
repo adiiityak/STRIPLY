@@ -8,6 +8,7 @@ import { WebcamModal } from './components/WebcamModal';
 import { PhotoEditModal } from './components/PhotoEditModal';
 import { StartScreen } from './components/StartScreen';
 import { SavedStripsModal } from './components/SavedStripsModal';
+import { LandingPage } from './components/LandingPage';
 import { useAccount } from './accounts/useAccount';
 import { PhotoItem, StripConfiguration, PlacedSticker } from './types';
 import { TEMPLATE_DEFINITIONS } from './data/templates';
@@ -71,11 +72,17 @@ export default function App() {
   const socialSharePreviewRef = useRef<string | null>(null);
   const socialShareRenderRef = useRef<Promise<string> | null>(null);
 
+  // An invite link opens its room directly. Deferred until the visitor is past
+  // the sign-up gate, so someone arriving from an invite signs up first and then
+  // lands in the room -- the query string survives because Google sign-in happens
+  // in-page rather than by redirect.
+  const invited = new URLSearchParams(location.search).has('room');
+  const gateOpen = account.status !== 'signed-out';
   useEffect(() => {
-    if (!new URLSearchParams(location.search).has('room')) return;
+    if (!invited || !gateOpen) return;
     setShowStartScreen(false);
     setIsWebcamOpen(true);
-  }, []);
+  }, [invited, gateOpen]);
 
   // Toast Notification. One effect owns dismissal so the initial welcome message
   // expires like any other, and a new toast restarts the clock instead of being
@@ -306,6 +313,12 @@ export default function App() {
 
   // The shell is exactly one viewport tall at every width: the canvas and the controls
   // sheet each scroll internally, so the page itself never scrolls.
+  // Sign-up gate. `unconfigured` deliberately passes: without a client id nobody
+  // could ever sign in, and a wall with no door is worse than an ungated booth.
+  if (account.status === 'signed-out') {
+    return <LandingPage account={account} invited={invited} />;
+  }
+
   return (
     <div className="app-shell overflow-hidden bg-[#FAF9F6] text-[#2D2D2D] flex flex-col font-sans selection:bg-[#FF6B6B] selection:text-white">
       {/* Top Header */}

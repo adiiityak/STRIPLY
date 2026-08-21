@@ -116,3 +116,27 @@
 .safe-bottom {
   padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
 }
+
+/* Drifting hearts on the landing page. Duration and delay are set per heart
+   inline; the whole effect is dropped for visitors who ask for less motion. */
+@keyframes striplyFloat {
+  from {
+    transform: translateY(0) scale(0.9);
+  }
+  to {
+    transform: translateY(-110dvh) scale(1.15);
+  }
+}
+
+.heart-drift {
+  animation-name: striplyFloat;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-drift {
+    animation: none;
+    opacity: 0.08;
+  }
+}
