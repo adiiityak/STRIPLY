@@ -1,3 +1,12 @@
+/**
+ * Poses the booth suggests, one per shot.
+ *
+ * Kept short: the hint sits in a pill over the feed on a laptop and in a single
+ * row above the background buttons on a phone, and a long line wraps to two.
+ *
+ * Almost all of these read the same whether one person or two are in frame, so
+ * the solo booth and the room can share the list.
+ */
 export const POSE_SUGGESTIONS = [
   'Hands under your chin',
   'Make half a heart',
@@ -10,7 +19,55 @@ export const POSE_SUGGESTIONS = [
   'Chin on your hand',
   'Hands framing your face',
   'Tilt your head and smile',
-  'Wink at the camera'
+  'Wink at the camera',
+  'Both hands on your cheeks',
+  'Stick your tongue out',
+  'Puff up your cheeks',
+  'Look up and smile',
+  'Hide behind your hands',
+  'Peek through your fingers',
+  'Finger heart by your eye',
+  'Double peace signs',
+  'Point at the camera',
+  'Shrug and grin',
+  'Hands in your hair',
+  'Chin up, eyes down',
+  'Your most serious face',
+  'Laugh at nothing',
+  'Cover your mouth and gasp',
+  'Thumbs up, big smile',
+  'Head tipped to one side',
+  'Look over your shoulder',
+  'Fake a yawn',
+  'Squish your own cheeks',
+  'Hands like a camera',
+  'One eyebrow up',
+  'Scrunch your nose',
+  'Hands over your heart',
+  'Cheesy open-mouth smile',
+  'Close your eyes and smile',
+  'Finger on your lips, shh',
+  'Salute the camera',
+  'Peace sign over one eye',
+  'Look down, soft smile',
+  'Big wave hello',
+  'Puppy eyes',
+  'Toothy grin',
+  'Slow blink',
+  'Cover half your face',
+  'Your best smirk',
+  'Heart hands overhead',
+  'Chin tucked, eyes up',
+  'Pretend to be shocked',
+  'Cheek on your palm',
+  'Hands behind your head',
+  'Arms crossed, chin up',
+  'Freeze mid-laugh',
+  'Side-eye the camera',
+  'Pretend to whisper',
+  'Mouth open, no sound',
+  'Pout at the lens',
+  'Peekaboo hands'
 ] as const;
 
 /**

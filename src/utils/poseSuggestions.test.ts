@@ -6,6 +6,25 @@ import {
   getRandomPoseOffset
 } from './poseSuggestions';
 
+describe('POSE_SUGGESTIONS', () => {
+  it('carries a deep enough pool that a booth rarely repeats itself', () => {
+    expect(POSE_SUGGESTIONS.length).toBeGreaterThanOrEqual(50);
+  });
+
+  // A duplicate would silently steal a slot from the rotation, so two different
+  // offsets would open on the same line.
+  it('holds no duplicates', () => {
+    expect(new Set(POSE_SUGGESTIONS).size).toBe(POSE_SUGGESTIONS.length);
+  });
+
+  // The hint is one line in a pill over the feed, and one row above the
+  // background buttons on a phone. A long suggestion wraps to two.
+  it('keeps every suggestion short enough for the pill', () => {
+    const tooLong = POSE_SUGGESTIONS.filter((pose) => pose.length > 30);
+    expect(tooLong).toEqual([]);
+  });
+});
+
 describe('getPoseSuggestion', () => {
   it('moves on from one shot to the next', () => {
     expect(getPoseSuggestion(0)).not.toBe(getPoseSuggestion(1));
