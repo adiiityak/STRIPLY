@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { LandingPage } from './LandingPage';
+import { LandingPage, shouldWarnAboutBlockedPopup } from './LandingPage';
 import { renderGoogleSignIn } from '../accounts/googleIdentity';
 import type { Account } from '../accounts/useAccount';
 
@@ -69,12 +69,30 @@ describe('LandingPage', () => {
 });
 
 describe('LandingPage sign-in guidance', () => {
-  // A blocked sign-in pop-up reports nothing error_callback can catch, so the
-  // button just looks dead. The hint stands rather than waiting for a failure
-  // that never gets reported.
-  it('always explains what to try if the button appears to do nothing', () => {
+  // Warning everyone up front implies a problem where there usually isn't one,
+  // so the hint waits for a press that visibly does nothing.
+  it('stays quiet until a press goes nowhere', () => {
     render(<LandingPage account={account()} />);
-    expect(screen.getByText(/allow pop-ups for this site/i)).toBeInTheDocument();
-    expect(screen.getByText(/private window/i)).toBeInTheDocument();
+    expect(screen.queryByText(/allow pop-ups for this site/i)).not.toBeInTheDocument();
+  });
+
+  // A blocked pop-up reports nothing error_callback can catch, so the only
+  // available signal is that nothing took focus away from this page.
+  it('warns when the press left this page focused and idle', () => {
+    expect(
+      shouldWarnAboutBlockedPopup({
+        stillFocused: true,
+        documentHidden: false,
+        signInInProgress: false
+      })
+    ).toBe(true);
+  });
+
+  it.each([
+    ['the pop-up took focus', { stillFocused: false, documentHidden: false, signInInProgress: false }],
+    ['the page was backgrounded', { stillFocused: true, documentHidden: true, signInInProgress: false }],
+    ['a credential is being exchanged', { stillFocused: true, documentHidden: false, signInInProgress: true }]
+  ])('stays quiet when %s', (_case, state) => {
+    expect(shouldWarnAboutBlockedPopup(state)).toBe(false);
   });
 });

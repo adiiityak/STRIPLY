@@ -18,11 +18,10 @@ type ExportSizingApi = {
     sourceHeight: number,
     box: { x: number; y: number; width: number; height: number }
   ) => { x: number; y: number; width: number; height: number };
-  coverImageWithin?: (
-    sourceWidth: number,
-    sourceHeight: number,
-    box: { x: number; y: number; width: number; height: number }
-  ) => { x: number; y: number; width: number; height: number };
+  fitShareStrip?: (
+    aspectRatio: number,
+    frame: { width: number; height: number }
+  ) => { stripWidth: number; stripHeight: number };
   shouldIncludeInExport?: (node: HTMLElement) => boolean;
   isCanvasVisuallyBlank?: (
     canvas: Pick<HTMLCanvasElement, 'width' | 'height' | 'getContext'>
@@ -270,10 +269,27 @@ describe('export image sizing', () => {
     });
   });
 
-  it('covers the full 2.7 by 6 canvas without white side padding', () => {
-    expect(
-      sizing.coverImageWithin?.(600, 1800, { x: 0, y: 0, width: 810, height: 1800 })
-    ).toEqual({ x: 0, y: -315, width: 810, height: 2430 });
+  // A rendered strip is around 3.5:1, far taller than the 2.7x6 print sheet. Sizing
+  // it to the sheet cropped a third of its height away -- the top of the first photo
+  // and the bottom of the last -- so exports now keep the strip's own proportions.
+  it('keeps the strip at its own proportions in the share image', () => {
+    const fitted = sizing.fitShareStrip?.(3.475, { width: 1080, height: 1920 });
+    expect(fitted?.stripWidth).toBeCloseTo(464.4, 1);
+    expect((fitted?.stripHeight ?? 0) / (fitted?.stripWidth ?? 1)).toBeCloseTo(3.475, 3);
+  });
+
+  it('shrinks an unusually tall strip so its rotated corners stay inside the frame', () => {
+    const frame = { width: 1080, height: 1920 };
+    const fitted = sizing.fitShareStrip?.(6, frame);
+    expect(fitted).toBeDefined();
+    const { stripWidth, stripHeight } = fitted!;
+    // Proportions survive the shrink, and the tilted bounding box clears the frame.
+    expect(stripHeight / stripWidth).toBeCloseTo(6, 3);
+    const radians = (6 * Math.PI) / 180;
+    const halfExtentY =
+      (stripWidth * Math.sin(radians) + stripHeight * Math.cos(radians)) / 2;
+    expect(frame.height * 0.51 + halfExtentY).toBeLessThanOrEqual(frame.height);
+    expect(frame.height * 0.51 - halfExtentY).toBeGreaterThanOrEqual(0);
   });
 
   it('places every PDF strip at exactly 2.7 by 6 inches', () => {
@@ -320,6 +336,35 @@ describe('export image sizing', () => {
     expect(drawImage).toHaveBeenCalledTimes(2);
     expect(fillRect).toHaveBeenCalledTimes(1);
     expect(fillText).not.toHaveBeenCalled();
+  });
+
+  it('draws the share strips at the rendered strip shape, not the print sheet shape', () => {
+    const drawImage = vi.fn();
+    const context = {
+      canvas: { width: 1080, height: 1920 },
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      drawImage,
+      fillRect: vi.fn(),
+      set fillStyle(_value: string) {},
+      set shadowColor(_value: string) {},
+      set shadowBlur(_value: number) {},
+      set shadowOffsetY(_value: number) {}
+    } as unknown as CanvasRenderingContext2D;
+
+    // A real four-photo strip rendered at 2.5x: 3.474:1, not the sheet's 2.222:1.
+    sizing.drawSocialShareComposition?.(context, {
+      naturalWidth: 700,
+      naturalHeight: 2432
+    } as unknown as CanvasImageSource);
+
+    const [, x, y, drawnWidth, drawnHeight] = drawImage.mock.calls[0] as number[];
+    expect(drawnHeight / drawnWidth).toBeCloseTo(2432 / 700, 3);
+    // Drawn centred on the rotation origin, so nothing is offset out of frame.
+    expect(x).toBeCloseTo(-drawnWidth / 2, 6);
+    expect(y).toBeCloseTo(-drawnHeight / 2, 6);
   });
 
   it('shares only the generated strip image through the native system sheet', async () => {

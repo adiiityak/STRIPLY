@@ -87,23 +87,6 @@ export function fitImageWithin(
   };
 }
 
-export function coverImageWithin(
-  sourceWidth: number,
-  sourceHeight: number,
-  box: { x: number; y: number; width: number; height: number }
-): { x: number; y: number; width: number; height: number } {
-  const scale = Math.max(box.width / sourceWidth, box.height / sourceHeight);
-  const width = sourceWidth * scale;
-  const height = sourceHeight * scale;
-
-  return {
-    x: box.x + (box.width - width) / 2,
-    y: box.y + (box.height - height) / 2,
-    width,
-    height
-  };
-}
-
 export const shouldIncludeInExport = (node: HTMLElement) =>
   !node.classList?.contains('no-export');
 
@@ -426,24 +409,74 @@ function loadDataUrlImage(dataUrl: string): Promise<HTMLImageElement> {
   });
 }
 
-async function normalisePhotoStripDataUrl(dataUrl: string): Promise<string> {
-  const image = await loadDataUrlImage(dataUrl);
-  const size = getPhotoStripExportSize();
-  const canvas = document.createElement('canvas');
-  canvas.width = size.width;
-  canvas.height = size.height;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('The photo strip export canvas is unavailable.');
+function firstPositiveSize(...candidates: unknown[]): number {
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0) return candidate;
+  }
+  return 0;
+}
 
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, size.width, size.height);
-  const placement = coverImageWithin(
-    image.naturalWidth || image.width,
-    image.naturalHeight || image.height,
-    { x: 0, y: 0, width: size.width, height: size.height }
+/**
+ * height / width of an already-rendered strip.
+ *
+ * A strip is whatever shape its template and slot count give it -- about 3.5:1
+ * for the default four-photo layout -- and not the 2.7x6 print sheet. Assuming
+ * the sheet's proportions here is what used to crop a third of the strip away.
+ */
+function getRenderedAspectRatio(image: CanvasImageSource): number {
+  const source = image as {
+    naturalWidth?: unknown;
+    naturalHeight?: unknown;
+    width?: unknown;
+    height?: unknown;
+  };
+  const width = firstPositiveSize(source.naturalWidth, source.width);
+  const height = firstPositiveSize(source.naturalHeight, source.height);
+  // An unmeasured source falls back to the nominal print shape.
+  if (!width || !height) return STRIP_HEIGHT_INCHES / STRIP_WIDTH_INCHES;
+  return height / width;
+}
+
+const SHARE_STRIP_ROTATION_DEGREES = 6;
+const SHARE_STRIP_WIDTH_FRACTION = 0.43;
+const SHARE_STRIP_CENTRES_X = [0.36, 0.64];
+const SHARE_STRIP_CENTRE_Y = 0.51;
+/** Fraction of the frame's shorter side kept clear around the strips. */
+const SHARE_FRAME_MARGIN = 0.03;
+
+/**
+ * Size of a single strip within the share image.
+ *
+ * The strip keeps its own proportions and shrinks only if it would otherwise
+ * overrun the frame. The test is against its *rotated* bounding box: tilting a
+ * tall strip grows its footprint both ways, so fitting the upright rectangle
+ * would let the corners poke out.
+ */
+export function fitShareStrip(
+  aspectRatio: number,
+  frame: { width: number; height: number }
+): { stripWidth: number; stripHeight: number } {
+  const radians = (SHARE_STRIP_ROTATION_DEGREES * Math.PI) / 180;
+  const sin = Math.abs(Math.sin(radians));
+  const cos = Math.abs(Math.cos(radians));
+  const margin = Math.min(frame.width, frame.height) * SHARE_FRAME_MARGIN;
+
+  const stripWidth = frame.width * SHARE_STRIP_WIDTH_FRACTION;
+  const stripHeight = stripWidth * aspectRatio;
+
+  const centreY = frame.height * SHARE_STRIP_CENTRE_Y;
+  const nearestEdgeX =
+    Math.min(...SHARE_STRIP_CENTRES_X.map((fraction) => Math.min(fraction, 1 - fraction))) *
+    frame.width;
+  const allowedHalfExtentX = nearestEdgeX - margin;
+  const allowedHalfExtentY = Math.min(centreY, frame.height - centreY) - margin;
+
+  const shrink = Math.min(
+    1,
+    allowedHalfExtentX / ((stripWidth * cos + stripHeight * sin) / 2),
+    allowedHalfExtentY / ((stripWidth * sin + stripHeight * cos) / 2)
   );
-  context.drawImage(image, placement.x, placement.y, placement.width, placement.height);
-  return canvas.toDataURL('image/png');
+  return { stripWidth: stripWidth * shrink, stripHeight: stripHeight * shrink };
 }
 
 export function drawSocialShareComposition(
@@ -454,16 +487,16 @@ export function drawSocialShareComposition(
   context.fillStyle = '#e9f2ff';
   context.fillRect(0, 0, width, height);
 
-  const stripWidth = width * 0.43;
-  const stripHeight = stripWidth * (STRIP_HEIGHT_INCHES / STRIP_WIDTH_INCHES);
-  const placements = [
-    { x: width * 0.36, y: height * 0.51, rotation: -6 },
-    { x: width * 0.64, y: height * 0.51, rotation: 6 }
-  ];
+  const { stripWidth, stripHeight } = fitShareStrip(getRenderedAspectRatio(image), {
+    width,
+    height
+  });
+  const centreY = height * SHARE_STRIP_CENTRE_Y;
 
-  placements.forEach(({ x, y, rotation }) => {
+  SHARE_STRIP_CENTRES_X.forEach((fraction, index) => {
+    const rotation = index === 0 ? -SHARE_STRIP_ROTATION_DEGREES : SHARE_STRIP_ROTATION_DEGREES;
     context.save();
-    context.translate(x, y);
+    context.translate(width * fraction, centreY);
     context.rotate((rotation * Math.PI) / 180);
     context.shadowColor = 'rgba(26, 49, 83, 0.24)';
     context.shadowBlur = 28;
@@ -474,9 +507,7 @@ export function drawSocialShareComposition(
 }
 
 export async function exportSocialShareToDataUrl(element: HTMLElement): Promise<string> {
-  const renderedStrip = await renderStripToPng(element, 2.5);
-  const normalisedStrip = await normalisePhotoStripDataUrl(renderedStrip);
-  const image = await loadDataUrlImage(normalisedStrip);
+  const image = await loadDataUrlImage(await renderStripToPng(element, 2.5));
   const canvas = document.createElement('canvas');
   canvas.width = 1080;
   canvas.height = 1920;
@@ -494,8 +525,10 @@ export async function downloadStripAsPNG(
   try {
     const scale = options.scale || 2.5;
 
-    const renderedStrip = await renderStripToPng(element, scale, options.transparent);
-    const dataUrl = await normalisePhotoStripDataUrl(renderedStrip);
+    // Saved at the strip's own proportions. Fitting it to the 2.7x6 print sheet
+    // used to crop whatever overflowed, and a rendered strip is taller than the
+    // sheet, so a third of it was being cut away.
+    const dataUrl = await renderStripToPng(element, scale, options.transparent);
     // Export is a download action on every device. Calling navigator.share only after the
     // asynchronous cold render loses mobile browsers' transient user activation and can leave
     // the share promise (and the Export spinner) pending. Sharing remains available through the
@@ -528,8 +561,8 @@ export async function downloadStripAsPDF(
   layoutType: PdfLayoutType = '2x6'
 ) {
   try {
-    const renderedStrip = await renderStripToPng(element, 2.5);
-    const dataUrl = await normalisePhotoStripDataUrl(renderedStrip);
+    const dataUrl = await renderStripToPng(element, 2.5);
+    const rendered = await loadDataUrlImage(dataUrl);
     const layout = getPdfLayout(layoutType);
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -538,16 +571,11 @@ export async function downloadStripAsPDF(
     });
 
     layout.placements.forEach((placement) => {
-      pdf.addImage(
-        dataUrl,
-        'PNG',
-        placement.x,
-        placement.y,
-        placement.width,
-        placement.height,
-        STRIP_ALIAS,
-        'FAST'
-      );
+      // A page slot is a fixed physical size, so the strip is centred inside it at
+      // its own proportions. Filling the slot exactly would either crop the strip
+      // or stretch it, since a rendered strip is taller than 2.7x6.
+      const box = fitImageWithin(rendered.naturalWidth, rendered.naturalHeight, placement);
+      pdf.addImage(dataUrl, 'PNG', box.x, box.y, box.width, box.height, STRIP_ALIAS, 'FAST');
     });
 
     const pdfArrayBuffer = pdf.output('arraybuffer');

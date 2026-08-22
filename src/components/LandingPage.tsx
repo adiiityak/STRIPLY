@@ -31,6 +31,15 @@ const HEARTS = [
   { left: '91%', delay: '4.2s', duration: '16s', size: 11, opacity: 0.15 }
 ];
 
+export function shouldWarnAboutBlockedPopup(state: {
+  /** This page still had focus a moment after the press. */
+  stillFocused: boolean;
+  documentHidden: boolean;
+  signInInProgress: boolean;
+}): boolean {
+  return state.stillFocused && !state.documentHidden && !state.signInInProgress;
+}
+
 interface LandingPageProps {
   account: Account;
   /** True when arriving from an invite link, so the copy can say so. */
@@ -43,6 +52,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ account, invited = fal
   const [order, setOrder] = useState([0, 1, 2, 3]);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [pressWentNowhere, setPressWentNowhere] = useState(false);
+  const busyRef = useRef(account.busy);
+  busyRef.current = account.busy;
 
   // Send the front card to the back.
   const shuffle = useCallback(() => {
@@ -58,6 +70,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({ account, invited = fal
       y: ((event.clientX - (box.left + box.width / 2)) / box.width) * 8
     });
   };
+
+  /**
+   * Whether a press on the Google button appears to have gone nowhere.
+   *
+   * A pop-up that actually opened takes focus off this page, or hides it on a
+   * phone, and a credential that arrived puts the account into a busy state.
+   * Neither happening means the press did nothing.
+   */
+  useEffect(() => {
+    const parent = signInRef.current;
+    if (!parent) return;
+    let timer: number | undefined;
+
+    // Google renders its button in a cross-origin iframe, so a press never
+    // reaches this document. Focus moving into that iframe is the only signal
+    // available -- error_callback does not fire when an extension swallows the
+    // pop-up, which is exactly the case worth warning about.
+    const handleBlur = () => {
+      const active = document.activeElement;
+      if (!active || active.tagName !== 'IFRAME' || !parent.contains(active)) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (shouldWarnAboutBlockedPopup({
+          stillFocused: document.hasFocus(),
+          documentHidden: document.hidden,
+          signInInProgress: busyRef.current
+        })) {
+          setPressWentNowhere(true);
+        }
+      }, 2500);
+    };
+
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const parent = signInRef.current;
@@ -176,14 +226,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ account, invited = fal
           </p>
         )}
 
-        {/* Shown to everyone rather than on failure. Google opens sign-in in a
-            pop-up, and when an extension or blocker swallows it the library
-            reports nothing this code can hook -- error_callback does not fire, so
-            the button simply appears dead. A standing hint beats a silent wall. */}
-        <p className="mt-3 max-w-[17rem] text-[11px] leading-relaxed text-[#999]">
-          Nothing happens when you tap it? Allow pop-ups for this site, or try a
-          private window &mdash; an extension may be blocking the Google window.
-        </p>
+        {/* Held back until a press visibly does nothing. Google's library cannot
+            report a swallowed pop-up -- error_callback does not fire -- so the
+            button just looks dead, but showing the warning to everyone up front
+            implies a problem where there usually isn't one. */}
+        {pressWentNowhere && (
+          <p className="mt-3 max-w-[17rem] text-[11px] leading-relaxed text-[#999]">
+            Still nothing? Allow pop-ups for this site, or try a private window
+            &mdash; an extension may be blocking the Google window.
+          </p>
+        )}
 
         <p className="mt-3 max-w-xs text-[11px] leading-relaxed text-[#999]">
           Free &middot; Your strips follow you to any device
