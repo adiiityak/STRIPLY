@@ -4,6 +4,28 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 /** Movement in px before a press counts as a pan rather than a click. */
 export const DRAG_THRESHOLD = 4;
 
+/**
+ * How much one wheel notch of a pinch changes zoom.
+ *
+ * Applied exponentially, so each notch is a constant proportion and the gesture
+ * feels the same at 40% as at 300%.
+ */
+export const WHEEL_ZOOM_SENSITIVITY = 0.01;
+
+/**
+ * A wheel/pinch stream has no end event, so idleness is what ends the gesture.
+ * Long enough to bridge the gap between notches, short enough that the zoom
+ * animation is back before a button press needs it.
+ */
+const ZOOM_IDLE_MS = 180;
+
+export function zoomFromWheelDelta(zoom: number, deltaY: number): number {
+  return zoom * Math.exp(-deltaY * WHEEL_ZOOM_SENSITIVITY);
+}
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 interface UseCanvasPanOptions {
   /** Presses starting inside an element matching this selector never pan. */
   ignoreSelector?: string;
@@ -29,6 +51,12 @@ export function useCanvasPan(
   const { ignoreSelector, zoom, onZoom } = options;
   const [isPanning, setIsPanning] = useState(false);
   const [canPan, setCanPan] = useState(false);
+  const [isZooming, setIsZooming] = useState(false);
+
+  // Mirrored in a ref so the raw listeners can check the flag without re-binding,
+  // and so a stream of wheel events sets state once rather than per notch.
+  const zooming = useRef(false);
+  const zoomIdleTimer = useRef<number | null>(null);
 
   // Live values for the pointer handlers, which are bound once and must not close over
   // a stale zoom or callback.
@@ -80,6 +108,63 @@ export function useCanvasPan(
     const el = containerRef.current;
     if (!el) return;
 
+    /**
+     * Marks a zoom gesture as live, and keeps it live until the notches stop.
+     *
+     * Callers use this to drop the strip's zoom transition: a 200ms tween is right
+     * for a button press but makes a gesture lag behind the fingers, which reads
+     * as the zoom being broken rather than smoothed.
+     */
+    const markZooming = () => {
+      if (!zooming.current) {
+        zooming.current = true;
+        setIsZooming(true);
+      }
+      if (zoomIdleTimer.current !== null) window.clearTimeout(zoomIdleTimer.current);
+      zoomIdleTimer.current = window.setTimeout(() => {
+        zooming.current = false;
+        zoomIdleTimer.current = null;
+        setIsZooming(false);
+      }, ZOOM_IDLE_MS);
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      // A trackpad pinch arrives as a wheel event with ctrlKey set. There is no
+      // second pointer to find, which is why the pointer pinch below never fired
+      // for a touchpad; Ctrl/Cmd + wheel is the same gesture with a mouse.
+      if (!onZoomRef.current || (!event.ctrlKey && !event.metaKey)) return;
+      // Without this the browser zooms the whole page instead of the strip.
+      event.preventDefault();
+
+      const rect = el.getBoundingClientRect();
+      const offsetX = event.clientX - rect.left;
+      const offsetY = event.clientY - rect.top;
+      // What sits under the cursor, as a fraction of the content. Ratios need no
+      // knowledge of the zoom factor or of how the wrapper sizes itself, so the
+      // same point can be restored once the strip has resized.
+      const ratioX = el.scrollWidth > 0 ? (el.scrollLeft + offsetX) / el.scrollWidth : 0;
+      const ratioY = el.scrollHeight > 0 ? (el.scrollTop + offsetY) / el.scrollHeight : 0;
+
+      markZooming();
+      onZoomRef.current(zoomFromWheelDelta(zoomRef.current, event.deltaY));
+
+      // The wrapper takes its new size on the next render; put the cursor's point
+      // back once it has, so the strip grows around the pointer rather than out of
+      // the top-left corner.
+      requestAnimationFrame(() => {
+        el.scrollLeft = clamp(
+          ratioX * el.scrollWidth - offsetX,
+          0,
+          Math.max(0, el.scrollWidth - el.clientWidth)
+        );
+        el.scrollTop = clamp(
+          ratioY * el.scrollHeight - offsetY,
+          0,
+          Math.max(0, el.scrollHeight - el.clientHeight)
+        );
+      });
+    };
+
     const distanceBetweenPointers = () => {
       const [a, b] = [...pointers.current.values()];
       if (!a || !b) return 0;
@@ -125,6 +210,7 @@ export function useCanvasPan(
       if (pinch.current && pointers.current.size >= 2) {
         const distance = distanceBetweenPointers();
         if (distance > 0 && pinch.current.startDistance > 0) {
+          markZooming();
           onZoomRef.current?.((pinch.current.startZoom * distance) / pinch.current.startDistance);
         }
         return;
@@ -188,11 +274,16 @@ export function useCanvasPan(
     el.addEventListener('pointermove', onPointerMove);
     el.addEventListener('pointerup', endGesture);
     el.addEventListener('pointercancel', endGesture);
+    // Not passive: the handler has to preventDefault to stop the browser zooming
+    // the page, and a passive listener may not.
+    el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       el.removeEventListener('pointerdown', onPointerDown);
       el.removeEventListener('pointermove', onPointerMove);
       el.removeEventListener('pointerup', endGesture);
       el.removeEventListener('pointercancel', endGesture);
+      el.removeEventListener('wheel', onWheel);
+      if (zoomIdleTimer.current !== null) window.clearTimeout(zoomIdleTimer.current);
     };
   }, [containerRef, ignoreSelector]);
 
@@ -204,5 +295,5 @@ export function useCanvasPan(
     el.scrollTop = Math.max(0, (el.scrollHeight - el.clientHeight) / 2);
   }, [containerRef]);
 
-  return { isPanning, canPan, centre };
+  return { isPanning, canPan, centre, isZooming };
 }

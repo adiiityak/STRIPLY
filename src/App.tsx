@@ -49,7 +49,7 @@ export default function App() {
 
   // Drag-to-pan the strip. The scroll container is <main>; anything marked data-no-pan
   // (the zoom toolbar, the sticker layer) keeps its own gestures.
-  const viewportRef = useRef<HTMLElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
 
   // Zoom & Modal States
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
@@ -59,7 +59,7 @@ export default function App() {
   const MAX_ZOOM = 1.4;
   const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
-  const { isPanning, canPan, centre } = useCanvasPan(viewportRef, {
+  const { isPanning, canPan, centre, isZooming } = useCanvasPan(viewportRef, {
     ignoreSelector: '[data-no-pan]',
     zoom: zoomLevel,
     onZoom: (next) => setZoomLevel(clampZoom(next))
@@ -434,19 +434,16 @@ export default function App() {
         {/* Middle Canvas Preview Area */}
         {/* Centring is done with my-auto on the strip wrapper rather than justify-center:
             auto margins still allow scrolling to the top once the strip overflows. */}
-        <main
-          ref={viewportRef}
-          // touch-pan-y keeps one-finger vertical scrolling native and smooth, while
-          // suppressing the browser's own pinch so two fingers reach our zoom handler.
-          className={`flex-1 min-h-0 bg-[#F0EEE9] p-4 sm:p-8 flex flex-col items-center relative overflow-auto touch-pan-y ${
-            isPanning ? 'cursor-grabbing' : canPan ? 'cursor-grab' : ''
-          }`}
-        >
+        {/* The scroll container is the inner div, not this element. Both toolbars
+            are positioned against this one, so they stay put while the strip
+            scrolls underneath -- as absolute children of the scroller they
+            scrolled away with the content and could not be reached. */}
+        <main className="relative flex flex-1 min-h-0 flex-col bg-[#F0EEE9]">
           {/* Save to gallery sits beside the strip rather than inside the
               gallery dialog: saving is something you do to the strip you are
               looking at, so it belongs where you are looking. */}
           {account.status === 'signed-in' && (
-            <div data-no-pan className="absolute top-4 left-4 z-20">
+            <div data-no-pan data-testid="save-strip-bar" className="absolute top-4 left-4 z-20">
               <button
                 onClick={handleSaveToGallery}
                 disabled={isSavingStrip || photos.length === 0}
@@ -468,6 +465,7 @@ export default function App() {
           {/* Canvas Zoom Toolbar floating top-right */}
           <div
             data-no-pan
+            data-testid="zoom-toolbar"
             className="absolute top-4 right-4 bg-white/90 backdrop-blur-md border border-[#E8E6DF] rounded-2xl p-1.5 flex items-center gap-1 shadow-md z-20 text-xs text-[#2D2D2D]"
           >
             <button
@@ -504,17 +502,28 @@ export default function App() {
             </button>
           </div>
 
-          {/* Interactive Live Strip Canvas */}
-          <div className="py-8 my-auto max-w-full flex justify-center items-center">
-            <StripCanvas
-              ref={canvasRef}
-              photos={photos}
-              config={config}
-              onUpdateSticker={handleUpdateSticker}
-              onDeleteSticker={handleDeleteSticker}
-              onEditPhoto={(photo) => setEditingPhoto(photo)}
-              zoomLevel={zoomLevel}
-            />
+          {/* touch-pan-y keeps one-finger vertical scrolling native and smooth, while
+              suppressing the browser's own pinch so two fingers reach our zoom handler. */}
+          <div
+            ref={viewportRef}
+            data-testid="strip-viewport"
+            className={`min-h-0 flex-1 overflow-auto touch-pan-y p-4 sm:p-8 flex flex-col items-center ${
+              isPanning ? 'cursor-grabbing' : canPan ? 'cursor-grab' : ''
+            }`}
+          >
+            {/* Interactive Live Strip Canvas */}
+            <div className="py-8 my-auto max-w-full flex justify-center items-center">
+              <StripCanvas
+                ref={canvasRef}
+                photos={photos}
+                config={config}
+                onUpdateSticker={handleUpdateSticker}
+                onDeleteSticker={handleDeleteSticker}
+                onEditPhoto={(photo) => setEditingPhoto(photo)}
+                zoomLevel={zoomLevel}
+                animateZoom={!isZooming}
+              />
+            </div>
           </div>
         </main>
 

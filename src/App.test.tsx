@@ -102,3 +102,43 @@ describe('App landing chrome', () => {
     expect(screen.queryByText(/share photo strip/i)).not.toBeInTheDocument();
   });
 });
+
+describe('App canvas toolbars', () => {
+  // Both toolbars used to be absolute children of the scroll container, so they
+  // travelled with the strip and scrolled out of reach. They are positioned
+  // against <main> now, which does not scroll.
+  it('keeps the zoom toolbar outside the scrolling area', async () => {
+    withAccounts(false);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /explore the app first/i }));
+
+    const viewport = await screen.findByTestId('strip-viewport');
+    const toolbar = screen.getByTestId('zoom-toolbar');
+    expect(viewport.contains(toolbar)).toBe(false);
+    expect(toolbar.parentElement?.tagName).toBe('MAIN');
+  });
+
+  it('keeps the save button outside the scrolling area', async () => {
+    accountStatus.value = 'signed-in';
+    render(<App />);
+    // A returning user's start screen says "Go to app" rather than "Explore".
+    fireEvent.click(await screen.findByRole('button', { name: /go to app/i }));
+
+    const viewport = await screen.findByTestId('strip-viewport');
+    const saveBar = await screen.findByTestId('save-strip-bar');
+    expect(viewport.contains(saveBar)).toBe(false);
+    expect(saveBar.parentElement?.tagName).toBe('MAIN');
+  });
+
+  // The scroll container has to be the element the pan hook is bound to, or
+  // dragging and the pinch anchor would move the wrong box.
+  it('scrolls the element the pan hook owns', async () => {
+    withAccounts(false);
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /explore the app first/i }));
+
+    const viewport = await screen.findByTestId('strip-viewport');
+    expect(viewport.className).toContain('overflow-auto');
+    expect(viewport.className).toContain('touch-pan-y');
+  });
+});

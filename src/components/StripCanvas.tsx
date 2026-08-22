@@ -35,6 +35,13 @@ interface StripCanvasProps {
   onDeleteSticker?: (id: string) => void;
   onEditPhoto?: (photo: PhotoItem) => void;
   zoomLevel: number;
+  /**
+   * False while a pinch or wheel zoom is in progress.
+   *
+   * The 200ms zoom tween is right for a toolbar press but makes a continuous
+   * gesture lag behind the fingers, which reads as broken rather than smooth.
+   */
+  animateZoom?: boolean;
 }
 
 // Helper Typewriter / Animated Caption component
@@ -99,7 +106,18 @@ const TypewriterText: React.FC<{
 };
 
 export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
-  ({ photos, config, onUpdateSticker, onDeleteSticker, onEditPhoto, zoomLevel }, ref) => {
+  (
+    {
+      photos,
+      config,
+      onUpdateSticker,
+      onDeleteSticker,
+      onEditPhoto,
+      zoomLevel,
+      animateZoom = true
+    },
+    ref
+  ) => {
     const [selectedStickerId, setSelectedStickerId] = React.useState<string | null>(null);
 
     // A CSS transform paints at a different size but leaves the layout box unchanged, so a
@@ -398,7 +416,8 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
 
     return (
       <div
-        className="relative transition-[width,height] duration-200"
+        data-testid="strip-zoom-frame"
+        className={`relative ${animateZoom ? 'transition-[width,height] duration-200' : ''}`}
         style={
           naturalSize
             ? { width: naturalSize.w * zoomLevel, height: naturalSize.h * zoomLevel }
@@ -406,7 +425,9 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
         }
       >
         <div
-          className="absolute top-0 left-0 transition-transform duration-200 select-none flex justify-center items-center"
+          className={`absolute top-0 left-0 select-none flex justify-center items-center ${
+            animateZoom ? 'transition-transform duration-200' : ''
+          }`}
           style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
         >
           {/* Main Canvas Container for Export */}
