@@ -56,6 +56,16 @@ export function getFilterCSS(filter: FilterSettings): string {
   return `contrast(${contrast}) brightness(${brightness}) sepia(${sepia}) saturate(${saturate}) hue-rotate(${hueRotate}deg)`;
 }
 
+/**
+ * Opacity of the grain overlay.
+ *
+ * Capped well below 1: the slider is a strength dial, and grain at full alpha
+ * would bury the photo rather than age it.
+ */
+export function getGrainOpacity(filter: FilterSettings): number {
+  return (filter.grain / 100) * 0.45;
+}
+
 export function getFadeOpacity(filter: FilterSettings): number {
   return (filter.fade / 100) * 0.25;
 }

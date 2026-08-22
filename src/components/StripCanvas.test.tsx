@@ -124,3 +124,61 @@ describe('StripCanvas sticker controls', () => {
     expect(Element.prototype.setPointerCapture).not.toHaveBeenCalled();
   });
 });
+
+// Textures are canvas-generated, and jsdom has no canvas backend. The shape of
+// the overlay is what matters here; whether it survives the exporter is verified
+// in a real browser.
+vi.mock('../utils/filmTextures', () => ({
+  getGrainTexture: () => 'data:image/png;base64,GRAIN',
+  getDustTexture: () => 'data:image/png;base64,DUST'
+}));
+
+describe('StripCanvas film effects', () => {
+  beforeEach(() => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverStub);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const renderWithFilter = (filter: Record<string, unknown>) => {
+    const template = TEMPLATE_DEFINITIONS.find(({ id }) => id === 'airmail')!;
+    return render(
+      <StripCanvas
+        photos={[]}
+        config={{ ...template.config, filter: { ...template.config.filter, ...filter } }}
+        zoomLevel={1}
+      />
+    );
+  };
+
+  // The grain slider was stored on the config and shown in the panel, but nothing
+  // ever rendered it: it changed neither the preview nor the export.
+  it('renders grain once the slider leaves zero', () => {
+    renderWithFilter({ grain: 0 });
+    expect(screen.queryByTestId('grain-overlay')).not.toBeInTheDocument();
+
+    renderWithFilter({ grain: 40 });
+    const grain = screen.getByTestId('grain-overlay');
+    expect(Number(grain.style.opacity)).toBeCloseTo(0.18, 6);
+    expect(grain.style.backgroundImage).toContain('GRAIN');
+  });
+
+  // The exporter ignores mix-blend-mode and will not draw stacked gradient
+  // backgrounds, so an effect defined with either is missing from every export.
+  it('builds dust from a plain tiling texture, not a blended gradient stack', () => {
+    renderWithFilter({ dustOverlay: true });
+
+    const dust = screen.getByTestId('dust-overlay');
+    expect(dust.style.backgroundImage).toContain('DUST');
+    expect(dust.style.backgroundImage).not.toContain('gradient');
+    expect(dust.className).not.toContain('mix-blend');
+  });
+
+  it('leaves no blend mode on any film overlay', () => {
+    const { container } = renderWithFilter({ grain: 50, dustOverlay: true, lightLeak: true });
+
+    expect(container.querySelectorAll('[class*="mix-blend"]')).toHaveLength(0);
+  });
+});

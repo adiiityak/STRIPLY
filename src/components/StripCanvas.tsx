@@ -1,6 +1,7 @@
 import React from 'react';
 import { PhotoItem, StripConfiguration, PlacedSticker } from '../types';
-import { getFilterCSS, getFadeOpacity } from '../utils/filterUtils';
+import { getFilterCSS, getFadeOpacity, getGrainOpacity } from '../utils/filterUtils';
+import { getDustTexture, getGrainTexture } from '../utils/filmTextures';
 import {
   computeSlotLayout,
   clampPhotoCount,
@@ -253,6 +254,9 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
     // Filter CSS
     const filterCSS = getFilterCSS(config.filter);
     const fadeOverlayOpacity = getFadeOpacity(config.filter);
+    // Built once and cached, so asking on every render costs nothing.
+    const grainTexture = config.filter.grain > 0 ? getGrainTexture() : '';
+    const dustTexture = config.filter.dustOverlay ? getDustTexture() : '';
 
     // Slot geometry: holds strip height constant across photo counts (2-6); 5 and 6 go flush
     // (gap only — the strip's own outer margin never changes, see C1).
@@ -463,18 +467,39 @@ export const StripCanvas = React.forwardRef<HTMLDivElement, StripCanvasProps>(
           )}
 
           {/* Film Burn / Light Leak Effect Overlay */}
+          {/* No mix-blend-screen: the exporter ignores blend modes, so the leak
+              always exported as this plain gradient anyway. Dropping it costs
+              nothing on screen and makes the preview honest. */}
           {config.filter.lightLeak && (
-            <div className="absolute inset-0 bg-gradient-to-tr from-rose-500/15 via-amber-400/10 to-transparent pointer-events-none z-20 mix-blend-screen" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-rose-500/15 via-amber-400/10 to-transparent pointer-events-none z-20" />
+          )}
+
+          {/* Film Grain Overlay */}
+          {/* The grain slider previously changed nothing anywhere: it was stored
+              on the config, shown in the panel, and never rendered. */}
+          {config.filter.grain > 0 && grainTexture && (
+            <div
+              data-testid="grain-overlay"
+              className="absolute inset-0 pointer-events-none z-20"
+              style={{
+                backgroundImage: `url(${grainTexture})`,
+                backgroundRepeat: 'repeat',
+                opacity: getGrainOpacity(config.filter)
+              }}
+            />
           )}
 
           {/* Film Dust Effect Overlay */}
-          {config.filter.dustOverlay && (
+          {/* A tiling texture rather than stacked radial-gradients under
+              mix-blend-overlay: the exporter drew neither, so dust was missing
+              from every export while looking right on screen. */}
+          {config.filter.dustOverlay && dustTexture && (
             <div
-              className="absolute inset-0 pointer-events-none z-20 opacity-30 mix-blend-overlay"
+              data-testid="dust-overlay"
+              className="absolute inset-0 pointer-events-none z-20 opacity-70"
               style={{
-                backgroundImage: `radial-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px), radial-gradient(rgba(0, 0, 0, 0.5) 1px, transparent 1px)`,
-                backgroundSize: '24px 24px, 18px 18px',
-                backgroundPosition: '0 0, 9px 9px'
+                backgroundImage: `url(${dustTexture})`,
+                backgroundRepeat: 'repeat'
               }}
             />
           )}
