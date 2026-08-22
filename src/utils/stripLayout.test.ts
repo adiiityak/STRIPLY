@@ -126,3 +126,29 @@ describe('clampPhotoCount', () => {
     expect(clampPhotoCount(4.4)).toBe(4);
   });
 });
+
+describe('strip size across vertical layouts', () => {
+  const metrics = { columnWidth: 240, framePadding: 8, photoGap: 10 };
+
+  // The strip is a fixed physical size, so choosing fewer photos has to grow the
+  // slots rather than shrink the strip. Anything unrecognised previously fell
+  // through to the grid branch and measured a 1x2 at roughly a third height.
+  it('keeps one height for every vertical layout', () => {
+    const heights = (['vertical-1x2', 'vertical-1x3', 'vertical-1x4'] as const).map(
+      (layout) => computePhotoAreaLayout(layout, metrics).height
+    );
+    expect(new Set(heights).size).toBe(1);
+  });
+
+  it('reports one column and the layout\'s own row count', () => {
+    expect(computePhotoAreaLayout('vertical-1x2', metrics)).toMatchObject({ columns: 1, rows: 2 });
+    expect(computePhotoAreaLayout('vertical-1x3', metrics)).toMatchObject({ columns: 1, rows: 3 });
+    expect(computePhotoAreaLayout('vertical-1x4', metrics)).toMatchObject({ columns: 1, rows: 4 });
+  });
+
+  it('still measures the grid on its own terms', () => {
+    const grid = computePhotoAreaLayout('grid-2x2', metrics);
+    expect(grid).toMatchObject({ columns: 2, rows: 2 });
+    expect(grid.height).not.toBe(computePhotoAreaLayout('vertical-1x4', metrics).height);
+  });
+});

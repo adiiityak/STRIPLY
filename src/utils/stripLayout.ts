@@ -1,4 +1,5 @@
 import type { PhotoLayout } from '../types';
+import { getGuidedSlotCount } from './photoLayout';
 
 export const BASELINE_COUNT = 4;
 export const BASELINE_ASPECT = 4 / 3; // width / height
@@ -35,7 +36,7 @@ export interface ColumnMetrics {
 
 export interface PhotoAreaLayout {
   columns: 1 | 2;
-  rows: 2 | 4;
+  rows: 2 | 3 | 4;
   gap: number;
   height: number;
 }
@@ -55,10 +56,15 @@ export function computePhotoAreaLayout(
   layout: PhotoLayout,
   metrics: ColumnMetrics
 ): PhotoAreaLayout {
-  if (layout === 'vertical-1x4') {
+  // Every vertical strip, not just the 4-slot one. Anything unrecognised used to
+  // fall through to the grid branch below and be measured as a 2x2, which
+  // collapsed a 1x2 or 1x3 strip to roughly a third of its height.
+  if (layout !== 'grid-2x2') {
     return {
       columns: 1,
-      rows: 4,
+      // Height stays the 4-photo baseline whatever the slot count, so a strip is
+      // the same size at every layout and only its slots grow.
+      rows: getGuidedSlotCount(layout),
       gap: metrics.photoGap,
       height: computeColumnHeight(metrics)
     };
