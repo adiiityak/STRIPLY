@@ -204,7 +204,12 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
           <span className="flex items-center gap-1"><Wifi className="h-3.5 w-3.5" /> {connectionState}</span>
         </div>
 
-        <BackgroundPicker value={shared.background} onChange={onBackgroundChange} onUpload={onBackgroundUpload} />
+        <BackgroundPicker
+          value={shared.background}
+          onChange={onBackgroundChange}
+          onUpload={onBackgroundUpload}
+          hint="One shared background. Changes from either person sync instantly."
+        />
         {backgroundFallback && (
           <p className="rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
             {backgroundFallback === 'too-slow'

@@ -23,9 +23,17 @@ interface BackgroundPickerProps {
   value: SharedBackground;
   onChange: (value: SharedBackground) => void;
   onUpload?: (file: File) => void;
+  /**
+   * Line shown under the swatches on wide screens.
+   *
+   * Supplied by the booth rather than fixed here: the room needs to explain that
+   * a change reaches the other person, which is meaningless in the solo booth --
+   * where it used to appear anyway, promising to sync with nobody.
+   */
+  hint?: string;
 }
 
-export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onChange, onUpload }) => (
+export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onChange, onUpload, hint }) => (
   <div className="min-w-0 space-y-1.5 lg:space-y-2">
     <div
       data-testid="background-primary-actions"
@@ -68,6 +76,6 @@ export const BackgroundPicker: React.FC<BackgroundPickerProps> = ({ value, onCha
         />
       ))}
     </div>
-    <p className="hidden text-[10px] text-[#777] lg:block">One shared background. Changes from either person sync instantly.</p>
+    {hint && <p className="hidden text-[10px] text-[#777] lg:block">{hint}</p>}
   </div>
 );

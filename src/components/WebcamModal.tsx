@@ -213,10 +213,19 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#2D2D2D]/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white border border-[#E8E6DF] rounded-3xl max-w-2xl w-full p-5 text-[#2D2D2D] shadow-2xl relative overflow-hidden flex flex-col">
+    <div
+      data-testid="solo-booth-backdrop"
+      className="fixed inset-0 z-50 flex h-[100dvh] items-start justify-center overflow-hidden bg-[#2D2D2D]/60 backdrop-blur-xs animate-in fade-in duration-200 lg:items-center lg:p-4"
+    >
+      {/* Sized and structured like the long-distance booth: on a laptop the feed
+          and its controls sit side by side inside one viewport, rather than the
+          feed pushing every control below the fold. */}
+      <div
+        data-testid="solo-booth-dialog"
+        className="relative flex h-[100dvh] w-full flex-col overflow-hidden bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] text-[#2D2D2D] shadow-2xl lg:h-auto lg:max-h-[calc(100dvh-2rem)] lg:max-w-6xl lg:rounded-3xl lg:border lg:border-[#E8E6DF] lg:p-6"
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-[#E8E6DF]">
+        <div className="mb-2 flex shrink-0 items-center justify-between border-b border-[#E8E6DF] pb-2 lg:mb-4 lg:pb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-[#FFF5F5] text-[#FF6B6B] flex items-center justify-center border border-[#FF6B6B]/20">
               <Camera className="w-4 h-4" />
@@ -229,14 +238,20 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
 
           <button
             onClick={onClose}
+            aria-label="Close web booth"
             className="w-8 h-8 rounded-full bg-[#FAF9F6] hover:bg-[#E8E6DF] text-[#666666] hover:text-[#2D2D2D] flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain lg:overflow-hidden">
+        <div
+          data-testid="solo-booth-layout"
+          className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-4"
+        >
         {/* Camera Feed & Flash Container */}
-        <div className="relative mt-4 bg-[#2D2D2D] rounded-2xl overflow-hidden aspect-[4/3] border border-[#E8E6DF] flex items-center justify-center">
+        <div className="relative bg-[#2D2D2D] rounded-2xl overflow-hidden aspect-[4/3] border border-[#E8E6DF] flex items-center justify-center lg:self-start">
           {errorMsg ? (
             <div className="text-center p-6 text-rose-400 text-sm max-w-sm">
               <p>{errorMsg}</p>
@@ -283,7 +298,13 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
           {/* Countdown Overlay */}
           <CountdownOverlay value={countdown} />
 
-          <div className="absolute bottom-3 left-1/2 z-20 max-w-[80%] -translate-x-1/2 rounded-full bg-black/65 px-4 py-2 text-center text-xs font-semibold text-white backdrop-blur-sm">
+          {/* Kept in the feed only where there is room to spare. On a phone the
+              pill sat over the chin and hands it was describing, so below the
+              feed it goes -- see the sibling row in the controls column. */}
+          <div
+            data-testid="solo-pose-hint-overlay"
+            className="absolute bottom-3 left-1/2 z-20 hidden max-w-[80%] -translate-x-1/2 rounded-full bg-black/65 px-4 py-2 text-center text-xs font-semibold text-white backdrop-blur-sm lg:block"
+          >
             <span className="mr-1 text-[10px] uppercase tracking-widest text-white/70">Try</span>
             {getPoseSuggestion(capturedPhotos.length)}
           </div>
@@ -295,9 +316,21 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
           </div>
         </div>
 
+        <div data-testid="solo-booth-controls" className="min-w-0 space-y-3">
+        {/* The pose hint, on a phone only: over the feed it hid the pose it was
+            asking for. First in this column, so it reads directly under the feed
+            and above the background buttons. */}
+        <div
+          data-testid="solo-pose-hint"
+          className="flex items-center justify-center gap-1.5 rounded-full border border-[#E8E6DF] bg-[#FAF9F6] px-3 py-2 text-center text-xs font-semibold text-[#2D2D2D] lg:hidden"
+        >
+          <span className="text-[10px] uppercase tracking-widest text-[#888]">Try</span>
+          {getPoseSuggestion(capturedPhotos.length)}
+        </div>
+
         {/* Background */}
         {stream && (
-          <div className="mt-4">
+          <div>
             <BackgroundPicker value={background} onChange={setBackground} />
             {liveBackground.fallbackReason && (
               <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
@@ -310,29 +343,37 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
         )}
 
         {/* Target Count Selectors & Controls */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#666666] font-semibold">Shots to take:</span>
-            {[2, 3, 4, 5, 6].map((num) => (
-              <button
-                key={num}
-                onClick={() => setTargetCount(num)}
-                disabled={isCapturingSeries}
-                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all ${
-                  targetCount === num
-                    ? 'bg-[#FF6B6B] text-white border-[#FF6B6B]'
-                    : 'bg-[#FAF9F6] text-[#666666] border-[#E8E6DF] hover:bg-[#E8E6DF]'
-                }`}
-              >
-                {num} Shots
-              </button>
-            ))}
+        <div className="space-y-2">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#888]">
+              Shots to take
+            </span>
+            {/* A grid of counts rather than a row of "N Shots" pills: five pills do
+                not fit a 20rem column, and wrapping them buried the start button. */}
+            <div className="mt-1.5 grid grid-cols-5 gap-1.5">
+              {[2, 3, 4, 5, 6].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setTargetCount(num)}
+                  disabled={isCapturingSeries}
+                  aria-label={`${num} shots`}
+                  aria-pressed={targetCount === num}
+                  className={`min-h-11 rounded-xl text-xs font-bold border transition-all ${
+                    targetCount === num
+                      ? 'bg-[#FF6B6B] text-white border-[#FF6B6B]'
+                      : 'bg-[#FAF9F6] text-[#666666] border-[#E8E6DF] hover:bg-[#E8E6DF]'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button
             onClick={startSeriesCapture}
             disabled={isCapturingSeries || !stream}
-            className="px-5 py-2.5 rounded-full bg-[#FF6B6B] hover:bg-[#ff5252] text-white text-xs font-bold shadow-md transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-[#FF6B6B] px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:bg-[#ff5252] active:scale-95 disabled:opacity-50"
           >
             {isCapturingSeries ? (
               <>
@@ -350,24 +391,12 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
 
         {/* Captured Thumbnails Preview */}
         {capturedPhotos.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-[#E8E6DF]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-[#2D2D2D]">
-                Captured ({capturedPhotos.length} / {targetCount})
-              </span>
-              <button
-                onClick={() => {
-                  onPhotosCaptured(capturedPhotos);
-                  onClose();
-                }}
-                className="px-3 py-1 bg-[#FF6B6B] hover:bg-[#ff5252] text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Use All Captured Photos</span>
-              </button>
-            </div>
+          <div className="border-t border-[#E8E6DF] pt-3">
+            <span className="text-xs font-bold text-[#2D2D2D]">
+              Captured ({capturedPhotos.length} / {targetCount})
+            </span>
 
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
               {capturedPhotos.map((url, idx) => (
                 <div key={idx} className="relative aspect-[4/3] rounded-lg overflow-hidden border border-[#E8E6DF] bg-[#FAF9F6]">
                   <img src={url} alt={`Snap ${idx + 1}`} className="w-full h-full object-cover" />
@@ -377,8 +406,22 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
                 </div>
               ))}
             </div>
+
+            <button
+              onClick={() => {
+                onPhotosCaptured(capturedPhotos);
+                onClose();
+              }}
+              className="mt-2 flex min-h-11 w-full items-center justify-center gap-1 rounded-xl bg-[#FF6B6B] px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-[#ff5252]"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Use All Captured Photos</span>
+            </button>
           </div>
         )}
+        </div>
+        </div>
+        </div>
       </div>
     </div>
   );
