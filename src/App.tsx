@@ -23,6 +23,7 @@ import {
 } from './utils/exportUtils';
 import { useCanvasPan } from './hooks/useCanvasPan';
 import { optimisePhotoFile } from './utils/photoImport';
+import { clearDraft, readDraft, shouldRestoreDraft, writeDraft } from './utils/draftStore';
 import { ZoomIn, ZoomOut, RefreshCw, Sparkles, CheckCircle2, AlertCircle, BookmarkPlus } from 'lucide-react';
 
 const DEFAULT_TEMPLATE_ID = 'airmail';
@@ -103,6 +104,33 @@ export default function App() {
     setShowStartScreen(false);
     setIsWebcamOpen(true);
   }, [invited, gateOpen]);
+
+  // The in-progress strip survives a reload. Until the check finishes the start
+  // screen is withheld, so a restored draft does not flash it on the way past.
+  const [draftChecked, setDraftChecked] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const draft = await readDraft();
+      if (cancelled) return;
+      if (shouldRestoreDraft(draft, { invited })) {
+        setPhotos(draft.photos);
+        setConfig(draft.config);
+        setShowStartScreen(false);
+      }
+      setDraftChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [invited]);
+
+  // Debounced so dragging a sticker does not write on every frame.
+  useEffect(() => {
+    if (!draftChecked || photos.length === 0) return;
+    const timer = setTimeout(() => void writeDraft({ photos, config }), 800);
+    return () => clearTimeout(timer);
+  }, [draftChecked, photos, config]);
 
   // Toast Notification. One effect owns dismissal so the initial welcome message
   // expires like any other, and a new toast restarts the clock instead of being
@@ -362,6 +390,10 @@ export default function App() {
                   // Ask Google to forget the selection too, or it silently
                   // re-picks the same account and signing out looks broken.
                   void forgetGoogleSelection();
+                  // Photos of someone's face must not outlive their session on a
+                  // shared machine.
+                  void clearDraft();
+                  setPhotos([]);
                   account.signOut();
                 }
           }
@@ -373,7 +405,7 @@ export default function App() {
 
       {/* Main Workspace Area */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
-        {showStartScreen && (
+        {showStartScreen && draftChecked && (
           <StartScreen
             onTakeLivePicture={() => {
               setShowStartScreen(false);

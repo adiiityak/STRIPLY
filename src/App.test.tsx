@@ -67,23 +67,25 @@ describe('App sign-up gate', () => {
 
   // A deployment with no client id could never get anyone through the gate, so
   // gating it would be a wall with no door.
-  it('leaves the booth open when accounts are not configured', () => {
+  it('leaves the booth open when accounts are not configured', async () => {
     withAccounts(false);
     render(<App />);
 
-    expect(screen.getByRole('button', { name: /explore the app first/i })).toBeInTheDocument();
+    // Awaited because the start screen is withheld until the saved-draft check
+    // finishes, so a restored draft never flashes it on the way past.
+    expect(await screen.findByRole('button', { name: /explore the app first/i })).toBeInTheDocument();
   });
 });
 
 describe('App landing chrome', () => {
   beforeEach(() => withAccounts(false));
 
-  it('keeps editor actions off the first screen and reveals them after entering the editor', () => {
+  it('keeps editor actions off the first screen and reveals them after entering the editor', async () => {
     render(<App />);
 
     expect(screen.queryByRole('banner')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /explore the app first/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /explore the app first/i }));
 
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /web booth/i })).toBeInTheDocument();
@@ -93,7 +95,7 @@ describe('App landing chrome', () => {
 
   it('shares directly from the header without opening an intermediate social dialog', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: /explore the app first/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /explore the app first/i }));
     fireEvent.click(screen.getByRole('button', { name: /^share$/i }));
 
     await waitFor(() => expect(exportMocks.shareSocialImageDataUrl).toHaveBeenCalledOnce());
