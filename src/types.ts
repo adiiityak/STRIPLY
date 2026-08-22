@@ -139,7 +139,7 @@ export interface MemoryCardDetails {
 
 export type ExportFormat = 'strip2x6' | 'strip4x6' | 'igStory' | 'igPost' | 'wallpaper' | 'a4Print';
 
-export type PhotoLayout = 'vertical-1x4' | 'grid-2x2';
+export type PhotoLayout = 'vertical-1x2' | 'vertical-1x3' | 'vertical-1x4' | 'grid-2x2';
 
 export type StickerAnimation = 'float' | 'bounce' | 'sway' | 'none';
 
