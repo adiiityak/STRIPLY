@@ -144,6 +144,12 @@ export const SavedStripsModal: React.FC<SavedStripsModalProps> = ({
               Sign in with Google to save finished strips and pick them up on another device.
             </p>
             <div ref={signInRef} />
+            {/* Same standing hint as the landing page: a blocked sign-in pop-up
+                reports nothing this code can catch. */}
+            <p className="max-w-[17rem] text-center text-[11px] leading-relaxed text-[#999]">
+              Nothing happens when you tap it? Allow pop-ups for this site, or try a private
+              window.
+            </p>
             {account.busy && <Loader2 className="h-4 w-4 animate-spin text-[#FF6B6B]" />}
           </div>
         )}

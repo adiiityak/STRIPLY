@@ -176,7 +176,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ account, invited = fal
           </p>
         )}
 
-        <p className="mt-4 max-w-xs text-[11px] leading-relaxed text-[#999]">
+        {/* Shown to everyone rather than on failure. Google opens sign-in in a
+            pop-up, and when an extension or blocker swallows it the library
+            reports nothing this code can hook -- error_callback does not fire, so
+            the button simply appears dead. A standing hint beats a silent wall. */}
+        <p className="mt-3 max-w-[17rem] text-[11px] leading-relaxed text-[#999]">
+          Nothing happens when you tap it? Allow pop-ups for this site, or try a
+          private window &mdash; an extension may be blocking the Google window.
+        </p>
+
+        <p className="mt-3 max-w-xs text-[11px] leading-relaxed text-[#999]">
           Free &middot; Your strips follow you to any device
         </p>
       </div>

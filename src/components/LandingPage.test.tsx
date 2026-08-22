@@ -67,3 +67,14 @@ describe('LandingPage', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/blocked/i);
   });
 });
+
+describe('LandingPage sign-in guidance', () => {
+  // A blocked sign-in pop-up reports nothing error_callback can catch, so the
+  // button just looks dead. The hint stands rather than waiting for a failure
+  // that never gets reported.
+  it('always explains what to try if the button appears to do nothing', () => {
+    render(<LandingPage account={account()} />);
+    expect(screen.getByText(/allow pop-ups for this site/i)).toBeInTheDocument();
+    expect(screen.getByText(/private window/i)).toBeInTheDocument();
+  });
+});
