@@ -19,7 +19,7 @@ import { BackgroundPicker } from './BackgroundPicker';
 import { CountdownOverlay } from './CountdownOverlay';
 import { RoomEntry } from './RoomEntry';
 import { optimiseSharedBackground } from '../utils/photoImport';
-import { getPoseSuggestion } from '../utils/poseSuggestions';
+import { getPoseOffsetForKey, getPoseSuggestion } from '../utils/poseSuggestions';
 
 /** How long the copy button holds its confirmed state before reverting. */
 const COPIED_FEEDBACK_MS = 2_000;
@@ -194,7 +194,9 @@ export const RemoteBoothView: React.FC<RemoteBoothViewProps> = ({
         <CountdownOverlay value={remaining} />
         <div className="absolute bottom-3 left-1/2 z-20 max-w-[80%] -translate-x-1/2 rounded-full bg-black/65 px-4 py-2 text-center text-[10px] font-semibold text-white backdrop-blur-sm lg:text-xs">
           <span className="mr-1 uppercase tracking-widest text-white/70">Try</span>
-          {getPoseSuggestion(frameUrls.length)}
+          {/* Seeded from the room code so both people are told the same pose, and
+              a new room starts somewhere new. */}
+          {getPoseSuggestion(frameUrls.length, getPoseOffsetForKey(code))}
         </div>
       </div>
 

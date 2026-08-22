@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { WebcamModal } from './WebcamModal';
+import { POSE_SUGGESTIONS } from '../utils/poseSuggestions';
 
 vi.mock('./RemoteBooth', () => ({
   RemoteBooth: () => <div data-testid="remote-booth-stub" />
@@ -31,9 +32,10 @@ describe('WebcamModal remote layout', () => {
     stubCamera();
     renderSolo();
 
-    expect(await screen.findByTestId('solo-pose-hint')).toHaveTextContent(
-      /hands under your chin/i
-    );
+    // Which pose it opens on is deliberately not fixed, so assert that it is one
+    // of them rather than pinning the first.
+    const hint = await screen.findByTestId('solo-pose-hint');
+    expect(POSE_SUGGESTIONS.some((pose) => hint.textContent?.includes(pose))).toBe(true);
   });
 });
 

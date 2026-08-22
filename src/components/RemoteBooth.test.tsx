@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RemoteBoothView } from './RemoteBooth';
+import { getPoseOffsetForKey, getPoseSuggestion } from '../utils/poseSuggestions';
 
 const shared = {
   layout: 'vertical-1x4' as const,
@@ -87,7 +88,11 @@ describe('RemoteBoothView', () => {
 
     const control = screen.getByRole('button', { name: /taking photo 2 of 4/i });
     expect(control).toBeDisabled();
-    expect(screen.getByText(/make half a heart/i)).toBeInTheDocument();
+    // Seeded from the room code, so both people are prompted alike and a new room
+    // starts somewhere new. One frame is in, so the hint is on the second pose.
+    expect(
+      screen.getByText(getPoseSuggestion(1, getPoseOffsetForKey('ABC234')))
+    ).toBeInTheDocument();
   });
 
   it('shows two equal participant feed panels', () => {

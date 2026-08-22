@@ -7,7 +7,7 @@ import { CountdownOverlay } from './CountdownOverlay';
 import { BackgroundPicker } from './BackgroundPicker';
 import { useLiveBackground } from '../remote/useLiveBackground';
 import type { SharedBackground } from '../remote/types';
-import { getPoseSuggestion } from '../utils/poseSuggestions';
+import { getPoseSuggestion, getRandomPoseOffset } from '../utils/poseSuggestions';
 
 const MAX_CAPTURE_DIMENSION = 1280;
 
@@ -38,6 +38,9 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
   const [flash, setFlash] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [background, setBackground] = useState<SharedBackground>({ mode: 'original' });
+  // Re-rolled each time the booth opens, then held for the session: the hint
+  // moves on between shots, but must not change while it is being read.
+  const [poseOffset, setPoseOffset] = useState(getRandomPoseOffset);
   const liveBackground = useLiveBackground(videoRef, background, boothMode === 'solo');
   const remoteBoothRef = useRef<RemoteBoothHandle | null>(null);
 
@@ -49,6 +52,10 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
       setBoothMode('choose');
     }
   }, [initialRemoteAction, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && boothMode === 'solo') setPoseOffset(getRandomPoseOffset());
+  }, [isOpen, boothMode]);
 
   // Initialize camera stream when modal opens
   useEffect(() => {
@@ -306,7 +313,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
             className="absolute bottom-3 left-1/2 z-20 hidden max-w-[80%] -translate-x-1/2 rounded-full bg-black/65 px-4 py-2 text-center text-xs font-semibold text-white backdrop-blur-sm lg:block"
           >
             <span className="mr-1 text-[10px] uppercase tracking-widest text-white/70">Try</span>
-            {getPoseSuggestion(capturedPhotos.length)}
+            {getPoseSuggestion(capturedPhotos.length, poseOffset)}
           </div>
 
           {/* Target Count Indicator Badge */}
@@ -325,7 +332,7 @@ export const WebcamModal: React.FC<WebcamModalProps> = ({
           className="flex items-center justify-center gap-1.5 rounded-full border border-[#E8E6DF] bg-[#FAF9F6] px-3 py-2 text-center text-xs font-semibold text-[#2D2D2D] lg:hidden"
         >
           <span className="text-[10px] uppercase tracking-widest text-[#888]">Try</span>
-          {getPoseSuggestion(capturedPhotos.length)}
+          {getPoseSuggestion(capturedPhotos.length, poseOffset)}
         </div>
 
         {/* Background */}
